@@ -11,6 +11,7 @@ import {
 }
 from "react-native";
 
+import { Suit } from "../cards/Card";
 
 import {
     Game
@@ -49,7 +50,7 @@ new Contract(
 
 4,
 
-"♠",
+Suit.Spades,
 
 Seat.South
 

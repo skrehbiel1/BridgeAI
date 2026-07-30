@@ -4,24 +4,16 @@ import { BridgeAI } from "../ai/BridgeAI";
 
 export class PlayerController {
 
-
-constructor(
-
-    public seat: Seat,
-
-    public ai?: BridgeAI
-
-){}
+    constructor(
+        public seat: Seat,
+        public ai?: BridgeAI
+    ) {}
 
 
+    isComputer(){
 
-isComputer(){
+        return this.ai !== undefined;
 
-    return (
-        this.ai !== undefined
-    );
-
-}
-
+    }
 
 }

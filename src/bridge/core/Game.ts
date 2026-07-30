@@ -40,8 +40,13 @@ import {
 } from "./PlayerController";
 
 import {
-    BeginnerAI,
-} from "../ai/BeginnerAI";
+    DeclarerAI,
+} from "../ai/DeclarerAI";
+
+import {
+    DefenseAI,
+} from "../ai/DefenseAI";
+
 
 
 export class Game {
@@ -67,7 +72,7 @@ export class Game {
 
         openingLeader: Seat
 
-    ){
+    ) {
 
 
         this.hands =
@@ -89,32 +94,51 @@ export class Game {
 
 
             [Seat.North]:
+
                 new PlayerController(
+
                     Seat.North,
-                    new BeginnerAI()
+
+                    new DeclarerAI()
+
                 ),
+
 
 
             [Seat.East]:
+
                 new PlayerController(
+
                     Seat.East,
-                    new BeginnerAI()
+
+                    new DefenseAI()
+
                 ),
+
 
 
             [Seat.South]:
+
                 new PlayerController(
+
                     Seat.South
+
                 ),
 
 
+
             [Seat.West]:
+
                 new PlayerController(
+
                     Seat.West,
-                    new BeginnerAI()
+
+                    new DefenseAI()
+
                 )
 
         };
+
 
     }
 
@@ -141,13 +165,17 @@ export class Game {
     ): boolean {
 
 
+
         if(
+
             seat !== this.currentSeat
-        ){
+
+        ) {
 
             return false;
 
         }
+
 
 
 
@@ -156,7 +184,9 @@ export class Game {
 
 
 
+
         const legal =
+
             PlayValidator.isLegalPlay(
 
                 hand,
@@ -171,6 +201,7 @@ export class Game {
 
 
 
+
         if(!legal){
 
             return false;
@@ -179,50 +210,69 @@ export class Game {
 
 
 
+
         hand.remove(card);
+
 
 
 
         const played: PlayedCard = {
 
+
             seat,
 
             card
+
 
         };
 
 
 
+
         this.table.currentTrick
+
             .addCard(
+
                 played
+
             );
 
 
 
+
+
         if(
+
             this.table.currentTrick
+
                 .isComplete()
-        ){
+
+        ) {
+
 
             this.finishTrick();
 
-        }
 
-        else {
+
+        } else {
+
 
 
             this.currentSeat =
+
                 nextSeat(
+
                     this.currentSeat
+
                 );
 
-
         }
+
 
 
 
         return true;
+
 
     }
 
@@ -233,15 +283,22 @@ export class Game {
     playComputerTurn(){
 
 
+
         const controller =
+
             this.controllers[
+
                 this.currentSeat
+
             ];
 
 
 
+
         if(
+
             !controller.isComputer()
+
         ){
 
             return;
@@ -250,19 +307,25 @@ export class Game {
 
 
 
+
         const card =
+
             controller.ai!
+
                 .chooseCard(
 
                     this.currentSeat,
 
                     this.handOf(
+
                         this.currentSeat
+
                     ),
 
                     this.table.currentTrick
 
                 );
+
 
 
 
@@ -281,14 +344,47 @@ export class Game {
 
 
 
+
+    playAllComputerTurns(){
+
+
+
+        while(
+
+            this.currentSeat !== Seat.South
+
+            &&
+
+            !this.isFinished()
+
+        ){
+
+
+            this.playComputerTurn();
+
+
+        }
+
+
+    }
+
+
+
+
+
+
     private finishTrick(){
 
 
+
         const winner =
+
             TrickWinner.determine(
 
                 this.table
+
                     .currentTrick
+
                     .cards,
 
                 this.contract.trump
@@ -297,22 +393,32 @@ export class Game {
 
 
 
+
+
         this.table.awardTrick(
 
             partnershipOf(
+
                 winner
+
             )
 
         );
 
 
 
+
+
         this.table.currentTrick
+
             .clear();
 
 
 
+
+
         this.currentSeat =
+
             winner;
 
 
@@ -322,7 +428,9 @@ export class Game {
 
 
 
+
     isFinished(): boolean {
+
 
 
         return (
@@ -334,6 +442,29 @@ export class Game {
             13
 
         );
+
+
+    }
+
+
+
+
+
+
+    tricksWon(){
+
+        return {
+
+            NS:
+
+                this.table.nsTricks,
+
+
+            EW:
+
+                this.table.ewTricks
+
+        };
 
     }
 

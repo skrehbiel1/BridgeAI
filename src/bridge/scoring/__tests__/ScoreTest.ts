@@ -1,3 +1,10 @@
+import { Suit } from "../../cards/Card";
+
+import {
+    Vulnerability
+}
+from "../RubberScore";
+
 import {
     Contract
 }
@@ -24,7 +31,7 @@ new Contract(
 
 4,
 
-"♠",
+Suit.Spades,
 
 Seat.South
 
@@ -32,7 +39,7 @@ Seat.South
 
 10,
 
-"None"
+Vulnerability.None
 
 );
 

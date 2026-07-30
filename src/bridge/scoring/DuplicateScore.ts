@@ -1,3 +1,5 @@
+import { Suit } from "../cards/Card";
+
 import {
     Contract
 }
@@ -137,17 +139,17 @@ const level =
 switch(contract.trump){
 
 
-case "♣":
+case Suit.Clubs:
 
-case "♦":
+case Suit.Diamonds:
 
 return level * 20;
 
 
 
-case "♥":
+case Suit.Hearts:
 
-case "♠":
+case Suit.Spades:
 
 return level * 30;
 
@@ -161,6 +163,7 @@ return 40 +
 
 
 }
+return 0;
 
 
 

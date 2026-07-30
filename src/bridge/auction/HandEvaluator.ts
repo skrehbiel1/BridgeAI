@@ -1,6 +1,6 @@
 import { Hand } from "../cards/Hand";
 import { Rank } from "../cards/Card";
-
+import { Suit } from "../cards/Card";
 
 export class HandEvaluator {
 
@@ -53,16 +53,16 @@ export class HandEvaluator {
         return {
 
             C:
-            hand.cardsOfSuit("C").length,
+            hand.cardsOfSuit(Suit.Clubs).length,
 
             D:
-            hand.cardsOfSuit("D").length,
+            hand.cardsOfSuit(Suit.Diamonds).length,
 
             H:
-            hand.cardsOfSuit("H").length,
+            hand.cardsOfSuit(Suit.Hearts).length,
 
             S:
-            hand.cardsOfSuit("S").length
+            hand.cardsOfSuit(Suit.Spades).length
 
         };
 
