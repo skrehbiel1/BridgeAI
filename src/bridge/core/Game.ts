@@ -2,143 +2,341 @@ import { Hand } from "../cards/Hand";
 import { Card } from "../cards/Card";
 
 import {
-  Seat,
-  nextSeat,
+    Seat,
+    nextSeat,
 } from "./Seat";
 
 import {
-  Deal,
-  DealResult,
+    Deal,
+    DealResult,
 } from "./Deal";
 
 import {
-  Table,
+    Table,
 } from "./Table";
 
 import {
-  Contract,
+    Contract,
 } from "../play/Contract";
 
 import {
-  PlayedCard,
+    PlayedCard,
 } from "../play/PlayedCard";
 
 import {
-  PlayValidator,
+    PlayValidator,
 } from "../play/PlayValidator";
 
 import {
-  TrickWinner,
+    TrickWinner,
 } from "../play/TrickWinner";
 
 import {
-  partnershipOf,
+    partnershipOf,
 } from "./Partnership";
 
+import {
+    PlayerController,
+} from "./PlayerController";
+
+import {
+    BeginnerAI,
+} from "../ai/BeginnerAI";
+
+
 export class Game {
-  hands: DealResult;
 
-  table = new Table();
 
-  currentSeat: Seat;
+    hands: DealResult;
 
-  constructor(
-    public contract: Contract,
-    openingLeader: Seat
-  ) {
-    this.hands =
-      Deal.create();
 
-    this.currentSeat =
-      openingLeader;
-  }
+    table: Table;
 
-  handOf(
-    seat: Seat
-  ): Hand {
-    return this.hands[seat];
-  }
 
-  playCard(
-    seat: Seat,
-    card: Card
-  ): boolean {
+    currentSeat: Seat;
 
-    if (
-      seat !==
-      this.currentSeat
-    ) {
-      return false;
+
+    controllers:
+        Record<Seat, PlayerController>;
+
+
+
+    constructor(
+
+        public contract: Contract,
+
+        openingLeader: Seat
+
+    ){
+
+
+        this.hands =
+            Deal.create();
+
+
+
+        this.table =
+            new Table();
+
+
+
+        this.currentSeat =
+            openingLeader;
+
+
+
+        this.controllers = {
+
+
+            [Seat.North]:
+                new PlayerController(
+                    Seat.North,
+                    new BeginnerAI()
+                ),
+
+
+            [Seat.East]:
+                new PlayerController(
+                    Seat.East,
+                    new BeginnerAI()
+                ),
+
+
+            [Seat.South]:
+                new PlayerController(
+                    Seat.South
+                ),
+
+
+            [Seat.West]:
+                new PlayerController(
+                    Seat.West,
+                    new BeginnerAI()
+                )
+
+        };
+
     }
 
-    const hand =
-      this.handOf(seat);
 
-    const legal =
-      PlayValidator.isLegalPlay(
-        hand,
-        card,
-        this.table
-          .currentTrick
-          .leadSuit
-      );
 
-    if (!legal) {
-      return false;
+
+    handOf(
+        seat: Seat
+    ): Hand {
+
+        return this.hands[seat];
+
     }
 
-    hand.remove(card);
 
-    const played: PlayedCard = {
-      seat,
-      card,
-    };
 
-    this.table.currentTrick
-      .addCard(played);
 
-    if (
-      this.table.currentTrick
-        .isComplete()
-    ) {
-      this.finishTrick();
-    } else {
-      this.currentSeat =
-        nextSeat(
-          this.currentSeat
+    playCard(
+
+        seat: Seat,
+
+        card: Card
+
+    ): boolean {
+
+
+        if(
+            seat !== this.currentSeat
+        ){
+
+            return false;
+
+        }
+
+
+
+        const hand =
+            this.handOf(seat);
+
+
+
+        const legal =
+            PlayValidator.isLegalPlay(
+
+                hand,
+
+                card,
+
+                this.table
+                    .currentTrick
+                    .leadSuit
+
+            );
+
+
+
+        if(!legal){
+
+            return false;
+
+        }
+
+
+
+        hand.remove(card);
+
+
+
+        const played: PlayedCard = {
+
+            seat,
+
+            card
+
+        };
+
+
+
+        this.table.currentTrick
+            .addCard(
+                played
+            );
+
+
+
+        if(
+            this.table.currentTrick
+                .isComplete()
+        ){
+
+            this.finishTrick();
+
+        }
+
+        else {
+
+
+            this.currentSeat =
+                nextSeat(
+                    this.currentSeat
+                );
+
+
+        }
+
+
+
+        return true;
+
+    }
+
+
+
+
+
+    playComputerTurn(){
+
+
+        const controller =
+            this.controllers[
+                this.currentSeat
+            ];
+
+
+
+        if(
+            !controller.isComputer()
+        ){
+
+            return;
+
+        }
+
+
+
+        const card =
+            controller.ai!
+                .chooseCard(
+
+                    this.currentSeat,
+
+                    this.handOf(
+                        this.currentSeat
+                    ),
+
+                    this.table.currentTrick
+
+                );
+
+
+
+        this.playCard(
+
+            this.currentSeat,
+
+            card
+
         );
+
+
     }
 
-    return true;
-  }
 
-  private finishTrick() {
-    const winner =
-      TrickWinner.determine(
-        this.table
-          .currentTrick
-          .cards,
-        this.contract
-          .trump
-      );
 
-    this.table.awardTrick(
-      partnershipOf(
-        winner
-      )
-    );
 
-    this.table.currentTrick
-      .clear();
 
-    this.currentSeat =
-      winner;
-  }
+    private finishTrick(){
 
-  isFinished(): boolean {
-    return (
-      this.table.totalTricks() ===
-      13
-    );
-  }
+
+        const winner =
+            TrickWinner.determine(
+
+                this.table
+                    .currentTrick
+                    .cards,
+
+                this.contract.trump
+
+            );
+
+
+
+        this.table.awardTrick(
+
+            partnershipOf(
+                winner
+            )
+
+        );
+
+
+
+        this.table.currentTrick
+            .clear();
+
+
+
+        this.currentSeat =
+            winner;
+
+
+    }
+
+
+
+
+
+    isFinished(): boolean {
+
+
+        return (
+
+            this.table.totalTricks()
+
+            ===
+
+            13
+
+        );
+
+    }
+
+
+
 }
