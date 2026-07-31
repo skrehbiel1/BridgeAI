@@ -26,6 +26,11 @@ export class Deal {
       west.add(deck.deal());
     }
 
+    north.sort();
+    east.sort();
+    south.sort();
+    west.sort();
+
     return {
       [Seat.North]: north,
       [Seat.East]: east,

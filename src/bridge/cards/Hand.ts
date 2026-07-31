@@ -8,35 +8,47 @@ export class Hand {
   }
 
   remove(card: Card): void {
-    const index =
-      this.cards.findIndex(
-        c =>
-          c.rank === card.rank &&
-          c.suit === card.suit
-      );
+    const index = this.cards.findIndex(
+      current =>
+        current.suit === card.suit &&
+        current.rank === card.rank
+    );
 
     if (index >= 0) {
       this.cards.splice(index, 1);
     }
   }
 
-  hasSuit(
-    suit: Suit
-  ): boolean {
-    return this.cards.some(
-      c => c.suit === suit
+  cardsOfSuit(suit: Suit): Card[] {
+    return this.cards.filter(
+      card => card.suit === suit
     );
   }
 
-  cardsOfSuit(
-    suit: Suit
-  ): Card[] {
-    return this.cards.filter(
-      c => c.suit === suit
+  hasSuit(suit: Suit): boolean {
+    return this.cards.some(
+      card => card.suit === suit
     );
   }
 
   count(): number {
     return this.cards.length;
+  }
+
+  sort(): void {
+    const suitOrder: Record<Suit, number> = {
+      [Suit.Spades]: 4,
+      [Suit.Hearts]: 3,
+      [Suit.Diamonds]: 2,
+      [Suit.Clubs]: 1,
+    };
+
+    this.cards.sort((a, b) => {
+      if (a.suit !== b.suit) {
+        return suitOrder[b.suit] - suitOrder[a.suit];
+      }
+
+      return b.rank - a.rank;
+    });
   }
 }

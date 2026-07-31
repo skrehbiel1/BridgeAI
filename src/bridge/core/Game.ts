@@ -280,65 +280,77 @@ export class Game {
 
 
 
-    playComputerTurn(){
+playComputerTurn(): boolean {
 
+    const seat = this.currentSeat;
 
+    const controller =
+        this.controllers[seat];
 
-        const controller =
+    if (!controller.isComputer()) {
+        return false;
+    }
 
-            this.controllers[
+    const hand =
+        this.handOf(seat);
 
-                this.currentSeat
+    if (hand.cards.length === 0) {
+        return false;
+    }
 
-            ];
+    const leadSuit =
+        this.table.currentTrick.leadSuit;
 
-
-
-
-        if(
-
-            !controller.isComputer()
-
-        ){
-
-            return;
-
-        }
-
-
-
-
-        const card =
-
-            controller.ai!
-
-                .chooseCard(
-
-                    this.currentSeat,
-
-                    this.handOf(
-
-                        this.currentSeat
-
-                    ),
-
-                    this.table.currentTrick
-
-                );
-
-
-
-
-        this.playCard(
-
-            this.currentSeat,
-
-            card
-
+    /*
+     * Ask the AI for its preferred card.
+     */
+    const aiCard =
+        controller.ai?.chooseCard(
+            seat,
+            hand,
+            this.table.currentTrick
         );
 
-
+    /*
+     * Use the AI card only if it is legal.
+     */
+    if (
+        aiCard &&
+        PlayValidator.isLegalPlay(
+            hand,
+            aiCard,
+            leadSuit
+        )
+    ) {
+        return this.playCard(
+            seat,
+            aiCard
+        );
     }
+
+    /*
+     * Fallback: find any legal card.
+     * This prevents the game from freezing
+     * when an AI returns an invalid choice.
+     */
+const fallbackCard =
+    hand.cards.find(card =>
+        PlayValidator.isLegalPlay(
+            hand,
+            card,
+            leadSuit
+        )
+    );
+
+if (!fallbackCard) {
+    return false;
+}
+
+return this.playCard(
+    seat,
+    fallbackCard
+);
+}
 
 
 
