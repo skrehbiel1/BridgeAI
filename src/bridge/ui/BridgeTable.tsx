@@ -24,18 +24,22 @@ import SeatView from "./SeatView";
 import TableCenter from "./TableCenter";
 
 const COMPUTER_PLAY_DELAY_MS = 650;
+const COMPLETED_TRICK_DELAY_MS = 1000;
 
 export default function BridgeTable() {
     /*
-     * Game mutates its own state, so renderVersion
-     * forces React to redraw after each successful play.
+     * Game mutates its internal state.
+     * Incrementing renderVersion forces React
+     * to redraw after each successful play.
      */
-    const [renderVersion, redraw] =
-        useReducer(
-            (version: number) =>
-                version + 1,
-            0
-        );
+    const [
+        renderVersion,
+        redraw
+    ] = useReducer(
+        (version: number) =>
+            version + 1,
+        0
+    );
 
     const [game] = useState(
         () =>
@@ -50,14 +54,23 @@ export default function BridgeTable() {
     );
 
     /*
+     * True while the four completed cards remain
+     * visible in the center of the table.
+     */
+    const [
+        showCompletedTrick,
+        setShowCompletedTrick
+    ] = useState(false);
+
+    /*
      * Play one computer card at a time.
      *
-     * The second turn check inside the timer prevents
-     * a delayed computer action from attempting to play
-     * after control has already reached South.
+     * Computer play pauses while a completed
+     * trick is being shown.
      */
     useEffect(() => {
         if (
+            showCompletedTrick ||
             game.isFinished() ||
             game.currentSeat === Seat.South
         ) {
@@ -65,30 +78,72 @@ export default function BridgeTable() {
         }
 
         const timer = setTimeout(() => {
+            /*
+             * Check again because the game state
+             * may have changed while waiting.
+             */
             if (
+                showCompletedTrick ||
                 game.isFinished() ||
                 game.currentSeat === Seat.South
             ) {
                 return;
             }
 
+            const tricksBefore =
+                game.table.totalTricks();
+
             const played =
                 game.playComputerTurn();
 
-            if (played) {
-                redraw();
+            if (!played) {
+                return;
             }
+
+            const trickCompleted =
+                game.table.totalTricks() >
+                tricksBefore;
+
+            if (trickCompleted) {
+                setShowCompletedTrick(true);
+            }
+
+            redraw();
         }, COMPUTER_PLAY_DELAY_MS);
 
         return () => {
             clearTimeout(timer);
         };
-    }, [game, renderVersion]);
+    }, [
+        game,
+        renderVersion,
+        showCompletedTrick
+    ]);
+
+    /*
+     * Keep a completed trick visible briefly,
+     * then allow the next leader to continue.
+     */
+    useEffect(() => {
+        if (!showCompletedTrick) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            setShowCompletedTrick(false);
+            redraw();
+        }, COMPLETED_TRICK_DELAY_MS);
+
+        return () => {
+            clearTimeout(timer);
+        };
+    }, [showCompletedTrick]);
 
     function playSouthCard(
         index: number
     ): void {
         if (
+            showCompletedTrick ||
             game.isFinished() ||
             game.currentSeat !== Seat.South
         ) {
@@ -105,31 +160,64 @@ export default function BridgeTable() {
             return;
         }
 
+        const tricksBefore =
+            game.table.totalTricks();
+
         const played =
             game.playCard(
                 Seat.South,
                 card
             );
 
-        if (played) {
-            redraw();
+        if (!played) {
+            return;
         }
+
+        const trickCompleted =
+            game.table.totalTricks() >
+            tricksBefore;
+
+        if (trickCompleted) {
+            setShowCompletedTrick(true);
+        }
+
+        redraw();
     }
 
-    const currentTrick =
-        game.table.currentTrick;
+    /*
+     * The real current trick may already have
+     * been cleared by Game.finishTrick().
+     *
+     * While pausing, show the preserved completed
+     * trick instead.
+     */
+    const displayedTrick =
+        showCompletedTrick &&
+        game.lastCompletedTrick
+            ? game.lastCompletedTrick
+            : game.table.currentTrick;
+
+    /*
+     * Legal-play highlighting must use the actual
+     * current trick, not the completed trick that
+     * is temporarily being displayed.
+     */
+    const activeLeadSuit =
+        game.table.currentTrick.leadSuit;
 
     const southHand =
         game.handOf(Seat.South);
 
     const southCanPlay =
+        !showCompletedTrick &&
         !game.isFinished() &&
         game.currentSeat === Seat.South;
 
     const statusMessage =
         getStatusMessage(
             game,
-            southCanPlay
+            southCanPlay,
+            showCompletedTrick
         );
 
     return (
@@ -175,8 +263,9 @@ export default function BridgeTable() {
                         }
                         orientation="horizontal"
                         active={
+                            !showCompletedTrick &&
                             game.currentSeat ===
-                            Seat.North
+                                Seat.North
                         }
                     />
                 </View>
@@ -192,15 +281,16 @@ export default function BridgeTable() {
                             }
                             orientation="vertical"
                             active={
+                                !showCompletedTrick &&
                                 game.currentSeat ===
-                                Seat.West
+                                    Seat.West
                             }
                         />
                     </View>
 
                     <View style={styles.centerArea}>
                         <TableCenter
-                            trick={currentTrick}
+                            trick={displayedTrick}
                         />
                     </View>
 
@@ -214,8 +304,9 @@ export default function BridgeTable() {
                             }
                             orientation="vertical"
                             active={
+                                !showCompletedTrick &&
                                 game.currentSeat ===
-                                Seat.East
+                                    Seat.East
                             }
                         />
                     </View>
@@ -244,9 +335,7 @@ export default function BridgeTable() {
 
                     <HandView
                         hand={southHand}
-                        leadSuit={
-                            currentTrick.leadSuit
-                        }
+                        leadSuit={activeLeadSuit}
                         enabled={southCanPlay}
                         onCardPlayed={
                             playSouthCard
@@ -260,8 +349,13 @@ export default function BridgeTable() {
 
 function getStatusMessage(
     game: Game,
-    southCanPlay: boolean
+    southCanPlay: boolean,
+    showCompletedTrick: boolean
 ): string {
+    if (showCompletedTrick) {
+        return "Trick complete";
+    }
+
     if (game.isFinished()) {
         const tricks =
             game.tricksWon();

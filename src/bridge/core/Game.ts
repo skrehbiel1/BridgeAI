@@ -1,5 +1,6 @@
 import { Hand } from "../cards/Hand";
 import { Card } from "../cards/Card";
+import { Trick } from "../play/Trick";
 
 import {
     Seat,
@@ -64,7 +65,7 @@ export class Game {
     controllers:
         Record<Seat, PlayerController>;
 
-
+    lastCompletedTrick: Trick | null = null;
 
     constructor(
 
@@ -381,60 +382,37 @@ return this.playCard(
     }
 
 
+private finishTrick(): void {
+    const completedTrick =
+        this.table.currentTrick;
 
-
-
-
-    private finishTrick(){
-
-
-
-        const winner =
-
-            TrickWinner.determine(
-
-                this.table
-
-                    .currentTrick
-
-                    .cards,
-
-                this.contract.trump
-
-            );
-
-
-
-
-
-        this.table.awardTrick(
-
-            partnershipOf(
-
-                winner
-
-            )
-
+    const winner =
+        TrickWinner.determine(
+            completedTrick.cards,
+            this.contract.trump
         );
 
+    /*
+     * Preserve all four played cards so the UI
+     * can display the completed trick briefly.
+     */
+    this.lastCompletedTrick =
+        new Trick();
 
+    this.lastCompletedTrick.cards =
+        [...completedTrick.cards];
 
+    this.lastCompletedTrick.leadSuit =
+        completedTrick.leadSuit;
 
+    this.table.awardTrick(
+        partnershipOf(winner)
+    );
 
-        this.table.currentTrick
+    this.table.currentTrick.clear();
 
-            .clear();
-
-
-
-
-
-        this.currentSeat =
-
-            winner;
-
-
-    }
+    this.currentSeat = winner;
+}
 
 
 
