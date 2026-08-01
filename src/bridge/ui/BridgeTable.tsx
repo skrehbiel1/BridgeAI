@@ -21,6 +21,8 @@ import HandView from "./HandView";
 import TableCenter from "./TableCenter";
 import TableHeader from "./TableHeader";
 
+import EndOfHandSummary from "./EndOfHandSummary";
+
 interface Props {
     game: Game;
     displayedTrick: Trick;
@@ -120,6 +122,13 @@ showCompletedTrick,
     }
 />
 
+{game.isFinished() && (
+    <EndOfHandSummary
+        game={game}
+        onNewHand={onNewHand}
+    />
+)}
+
           </View>
         </SafeAreaView>
     );
@@ -133,6 +142,7 @@ const styles = StyleSheet.create({
 
     container: {
         flex: 1,
+	position: "relative",
         backgroundColor: "#1B7040",
         paddingTop: 6,
         paddingHorizontal: 8,
