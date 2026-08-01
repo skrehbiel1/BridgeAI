@@ -1,15 +1,16 @@
 import React from "react";
 
-import BridgeTable
-from "./src/bridge/ui/BridgeTable";
+import {
+    SafeAreaProvider
+} from "react-native-safe-area-context";
 
+import BridgeScreen
+from "./src/bridge/ui/BridgeScreen";
 
-export default function App(){
-
+export default function App() {
     return (
-
-        <BridgeTable/>
-
+        <SafeAreaProvider>
+            <BridgeScreen />
+        </SafeAreaProvider>
     );
-
 }

@@ -1,16 +1,9 @@
-import React, {
-    useEffect,
-    useReducer,
-    useState
-} from "react";
+import React from "react";
 
 import {
     StyleSheet,
-    Text,
     View
 } from "react-native";
-
-import TableHeader from "./TableHeader";
 
 import {
     SafeAreaView
@@ -18,256 +11,51 @@ import {
 
 import { Game } from "../core/Game";
 import { Seat } from "../core/Seat";
-import { Suit } from "../cards/Card";
-import { Contract } from "../play/Contract";
+import { Trick } from "../play/Trick";
+
+import DummyHandView from "./DummyHandView";
+import SouthHandView from "./SouthHandView";
 
 import HandView from "./HandView";
 import SeatView from "./SeatView";
 import TableCenter from "./TableCenter";
+import TableHeader from "./TableHeader";
 
-const COMPUTER_PLAY_DELAY_MS = 650;
-const COMPLETED_TRICK_DELAY_MS = 1000;
+interface Props {
+    game: Game;
+    displayedTrick: Trick;
+    dummyVisible: boolean;
+    southCanPlay: boolean;
+    northCanPlay: boolean;
+    statusMessage: string;
 
-function createGame(): Game {
+    onPlayHumanCard: (
+        seat: Seat,
+        index: number
+    ) => void;
 
-    return new Game(
-
-        new Contract(
-            4,
-            Suit.Spades,
-            Seat.South
-        ),
-
-        Seat.West
-
-    );
-
+    onNewHand: () => void;
 }
 
-export default function BridgeTable() {
+export default function BridgeTable({
+    game,
+    displayedTrick,
+    dummyVisible,
+    southCanPlay,
+    northCanPlay,
+    statusMessage,
+    onPlayHumanCard,
+    onNewHand
+}: Props) {
+    const northHand =
+        game.handOf(Seat.North);
 
-    const [
-        renderVersion,
-        redraw
-    ] = useReducer(
-        (x: number) => x + 1,
-        0
-    );
-
-    const [
-        game,
-        setGame
-    ] = useState<Game>(
-        createGame
-    );
-
-    const [
-        showCompletedTrick,
-        setShowCompletedTrick
-    ] = useState(false);
-
-    const dummyVisible =
-        game.openingLeadMade;
-
-    useEffect(() => {
-
-        if (
-            showCompletedTrick ||
-            game.isFinished() ||
-            game.isHumanControlled(
-                game.currentSeat
-            )
-        ) {
-            return;
-        }
-
-        const timer =
-            setTimeout(() => {
-
-                if (
-                    showCompletedTrick ||
-                    game.isFinished() ||
-                    game.isHumanControlled(
-                        game.currentSeat
-                    )
-                ) {
-                    return;
-                }
-
-                const tricksBefore =
-                    game.table.totalTricks();
-
-                const played =
-                    game.playComputerTurn();
-
-                if (!played) {
-                    return;
-                }
-
-                if (
-                    game.table.totalTricks() >
-                    tricksBefore
-                ) {
-                    setShowCompletedTrick(
-                        true
-                    );
-                }
-
-                redraw();
-
-            }, COMPUTER_PLAY_DELAY_MS);
-
-        return () =>
-            clearTimeout(timer);
-
-    }, [
-        game,
-        renderVersion,
-        showCompletedTrick
-    ]);
-
-    useEffect(() => {
-
-        if (
-            !showCompletedTrick
-        ) {
-            return;
-        }
-
-        const timer =
-            setTimeout(() => {
-
-                setShowCompletedTrick(
-                    false
-                );
-
-                redraw();
-
-            },
-            COMPLETED_TRICK_DELAY_MS);
-
-        return () =>
-            clearTimeout(timer);
-
-    }, [
-        showCompletedTrick
-    ]);
-
-    function playHumanCard(
-
-        seat: Seat,
-
-        index: number
-
-    ) {
-
-        if (
-            showCompletedTrick ||
-            game.currentSeat !== seat
-        ) {
-            return;
-        }
-
-        const hand =
-            game.handOf(seat);
-
-        const card =
-            hand.cards[index];
-
-        if (!card) {
-            return;
-        }
-
-        const tricksBefore =
-            game.table.totalTricks();
-
-        const played =
-            game.playCard(
-                seat,
-                card
-            );
-
-        if (!played) {
-            return;
-        }
-
-        if (
-            game.table.totalTricks() >
-            tricksBefore
-        ) {
-            setShowCompletedTrick(
-                true
-            );
-        }
-
-        redraw();
-
-    }
-
-    function restartGame() {
-
-        setShowCompletedTrick(
-            false
-        );
-
-        setGame(
-            createGame()
-        );
-
-    }
-
-    const displayedTrick =
-
-        showCompletedTrick &&
-
-        game.lastCompletedTrick
-
-            ? game.lastCompletedTrick
-
-            : game.table.currentTrick;
+    const southHand =
+        game.handOf(Seat.South);
 
     const activeLeadSuit =
         game.table.currentTrick
             .leadSuit;
-
-    const southCanPlay =
-
-        !showCompletedTrick &&
-
-        game.currentSeat ===
-        Seat.South;
-
-    const northCanPlay =
-
-        dummyVisible &&
-
-        !showCompletedTrick &&
-
-        game.currentSeat ===
-        Seat.North;
-
-    const statusMessage =
-        getStatusMessage(
-
-            game,
-
-            southCanPlay,
-
-            northCanPlay,
-
-            showCompletedTrick
-
-        );
-
-    const southHand =
-        game.handOf(
-            Seat.South
-        );
-
-    const northHand =
-        game.handOf(
-            Seat.North
-        );
 
     return (
         <SafeAreaView
@@ -280,72 +68,44 @@ export default function BridgeTable() {
             ]}
         >
             <View style={styles.container}>
-<TableHeader
-    nsTricks={game.table.nsTricks}
-    ewTricks={game.table.ewTricks}
-    onNewHand={restartGame}
-/>
+                <TableHeader
+                    nsTricks={
+                        game.table.nsTricks
+                    }
+                    ewTricks={
+                        game.table.ewTricks
+                    }
+                    onNewHand={onNewHand}
+                />
 
-<View style={styles.northRow}>
-
-    {
-        dummyVisible
-
-        ?
-
-        <View style={styles.dummyArea}>
-
-            <View style={styles.dummyHeading}>
-
-                <Text style={styles.dummyTitle}>
-                    North (Dummy)
-                </Text>
-
-                <Text style={styles.dummyCount}>
-                    {northHand.cards.length} cards
-                </Text>
-
-            </View>
-
-            <HandView
-
-                hand={northHand}
-
-                leadSuit={activeLeadSuit}
-
-                enabled={northCanPlay}
-
-                onCardPlayed={
-                    index =>
-                        playHumanCard(
-                            Seat.North,
-                            index
-                        )
-                }
-
-            />
-
-        </View>
-
-        :
-
-        <SeatView
-
-            name="North"
-
-            cardCount={
-                northHand.cards.length
-            }
-
-            orientation="horizontal"
-
-            active={false}
-
-        />
-
+                <View style={styles.northRow}>
+                    {dummyVisible ? (
+     <DummyHandView
+    hand={northHand}
+    leadSuit={activeLeadSuit}
+    enabled={northCanPlay}
+    onCardPlayed={
+        index =>
+            onPlayHumanCard(
+                Seat.North,
+                index
+            )
     }
-
-</View>
+/>
+                    ) : (
+                        <SeatView
+                            name="North"
+                            cardCount={
+                                northHand.cards.length
+                            }
+                            orientation="horizontal"
+                            active={
+                                game.currentSeat ===
+                                Seat.North
+                            }
+                        />
+                    )}
+                </View>
 
                 <View style={styles.middleRow}>
                     <View style={styles.sideSeat}>
@@ -358,16 +118,17 @@ export default function BridgeTable() {
                             }
                             orientation="vertical"
                             active={
-                                !showCompletedTrick &&
                                 game.currentSeat ===
-                                    Seat.West
+                                Seat.West
                             }
                         />
                     </View>
 
                     <View style={styles.centerArea}>
                         <TableCenter
-                            trick={displayedTrick}
+                            trick={
+                                displayedTrick
+                            }
                         />
                     </View>
 
@@ -381,82 +142,35 @@ export default function BridgeTable() {
                             }
                             orientation="vertical"
                             active={
-                                !showCompletedTrick &&
                                 game.currentSeat ===
-                                    Seat.East
+                                Seat.East
                             }
                         />
                     </View>
                 </View>
 
-                <View style={styles.southArea}>
-                    <View style={styles.southHeading}>
-                        <Text style={styles.southTitle}>
-                            South — You
-                        </Text>
+ 
+<SouthHandView
+    hand={southHand}
+    leadSuit={activeLeadSuit}
+    enabled={southCanPlay}
+    statusMessage={statusMessage}
+    highlightStatus={
+        southCanPlay ||
+        northCanPlay
+    }
+    onCardPlayed={
+        index =>
+            onPlayHumanCard(
+                Seat.South,
+                index
+            )
+    }
+/>
 
-                        <Text style={styles.cardCount}>
-                            {southHand.cards.length} cards
-                        </Text>
-                    </View>
-
-                    <Text
-                        style={[
-                            styles.statusMessage,
-                            southCanPlay &&
-                                styles.yourTurnMessage
-                        ]}
-                    >
-                        {statusMessage}
-                    </Text>
-
-                    <HandView
-                        hand={southHand}
-                        leadSuit={activeLeadSuit}
-                        enabled={southCanPlay}
-                        onCardPlayed={
-    index =>
-        playHumanCard(
-            Seat.South,
-            index
-        )
-}
-                    />
-                </View>
-            </View>
+          </View>
         </SafeAreaView>
     );
-}
-
-function getStatusMessage(
-    game: Game,
-    southCanPlay: boolean,
-    northCanPlay: boolean,
-    showCompletedTrick: boolean
-): string {
-    if (showCompletedTrick) {
-        return "Trick complete";
-    }
-
-    if (game.isFinished()) {
-        const tricks = game.tricksWon();
-
-        return (
-            `Hand complete — ` +
-            `NS ${tricks.NS}, ` +
-            `EW ${tricks.EW}`
-        );
-    }
-
-    if (southCanPlay) {
-        return "Your turn — play from South";
-    }
-
-    if (northCanPlay) {
-        return "Your turn — play from dummy";
-    }
-
-    return `${game.currentSeat} is playing`;
 }
 
 const styles = StyleSheet.create({
@@ -473,19 +187,17 @@ const styles = StyleSheet.create({
         paddingBottom: 8
     },
 
-
-northRow: {
-
-    minHeight: 135,
-    paddingVertical: 4,
+    northRow: {
+        minHeight: 94,
         alignItems: "center",
-        justifyContent: "center"
+        justifyContent: "center",
+        paddingVertical: 4
     },
 
     middleRow: {
         flex: 1,
         width: "100%",
-        minHeight: 215,
+        minHeight: 175,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between"
@@ -505,90 +217,5 @@ northRow: {
         paddingHorizontal: 2
     },
 
-    southArea: {
-        width: "100%",
-        alignItems: "center",
-        paddingTop: 4,
-        paddingBottom: 4
-    },
 
-    southHeading: {
-        width: "100%",
-        maxWidth: 340,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        paddingHorizontal: 3,
-        marginBottom: 2
-    },
-
-    southTitle: {
-        color: "#FFFFFF",
-        fontSize: 18,
-        fontWeight: "700",
-        lineHeight: 23,
-        includeFontPadding: false
-    },
-
-    cardCount: {
-        color: "#E8F5E9",
-        fontSize: 13,
-        includeFontPadding: false
-    },
-
-    statusMessage: {
-        minHeight: 20,
-        color: "#FFFFFF",
-        fontSize: 14,
-        fontWeight: "600",
-        lineHeight: 19,
-        textAlign: "center",
-        marginBottom: 6,
-        includeFontPadding: false
-    },
-dummyArea: {
-
-    width: "100%",
-
-    maxWidth: 350,
-
-    alignItems: "center"
-
-},
-
-dummyHeading: {
-
-    width: "100%",
-
-    flexDirection: "row",
-
-    justifyContent: "space-between",
-
-    paddingHorizontal: 4,
-
-    marginBottom: 2
-
-},
-
-dummyTitle: {
-
-    color: "#FFFFFF",
-
-    fontSize: 16,
-
-    fontWeight: "700"
-
-},
-
-dummyCount: {
-
-    color: "#E8F5E9",
-
-    fontSize: 12
-
-},
-
-    yourTurnMessage: {
-        color: "#FFEB3B"
-    }
 });
