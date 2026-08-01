@@ -1,7 +1,9 @@
 import React from "react";
 
 import {
+    Pressable,
     StyleSheet,
+    Text,
     View
 } from "react-native";
 
@@ -23,6 +25,8 @@ import TableHeader from "./TableHeader";
 
 import EndOfHandSummary from "./EndOfHandSummary";
 
+import TrickHistoryView from "./TrickHistoryView";
+
 interface Props {
     game: Game;
     displayedTrick: Trick;
@@ -30,7 +34,11 @@ interface Props {
     southCanPlay: boolean;
     northCanPlay: boolean;
     statusMessage: string;
-showCompletedTrick: boolean;
+    showCompletedTrick: boolean;
+
+    historyVisible: boolean;
+    onShowHistory: () => void;
+    onCloseHistory: () => void;
 
     onPlayHumanCard: (
         seat: Seat,
@@ -47,7 +55,10 @@ export default function BridgeTable({
     southCanPlay,
     northCanPlay,
     statusMessage,
-showCompletedTrick,
+    showCompletedTrick,
+    historyVisible,
+    onShowHistory,
+    onCloseHistory,
     onPlayHumanCard,
     onNewHand
 }: Props) {
@@ -81,7 +92,19 @@ showCompletedTrick,
                     }
                     onNewHand={onNewHand}
                 />
-
+<Pressable
+    onPress={onShowHistory}
+    style={styles.historyButton}
+>
+    <Text style={styles.historyButtonText}>
+        History
+    </Text>
+</Pressable>
+<TrickHistoryView
+    game={game}
+    visible={historyVisible}
+    onClose={onCloseHistory}
+/>
 <NorthArea
     hand={northHand}
     dummyVisible={dummyVisible}
@@ -139,7 +162,20 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#145A32"
     },
+historyButton: {
+    alignSelf: "center",
+    marginTop: 6,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 8
+},
 
+historyButtonText: {
+    color: "#173A26",
+    fontSize: 14,
+    fontWeight: "800"
+},
     container: {
         flex: 1,
 	position: "relative",

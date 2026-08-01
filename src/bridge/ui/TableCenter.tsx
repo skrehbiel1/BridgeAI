@@ -11,6 +11,8 @@ import {
     Suit
 } from "../cards/Card";
 
+import AnimatedPlayedCard from "./AnimatedPlayedCard";
+
 import { Seat } from "../core/Seat";
 import { Trick } from "../play/Trick";
 import { suitSymbol } from "../cards/SuitDisplay";
@@ -57,28 +59,6 @@ function suitColor(
     return "#111111";
 }
 
-function PlayedCardView({
-    card
-}: PlayedCardProps) {
-    return (
-        <View style={styles.playedCard}>
-            <Text
-                style={[
-                    styles.cardText,
-                    {
-                        color:
-                            suitColor(
-                                card.suit
-                            )
-                    }
-                ]}
-            >
-                {displayRank(card.rank)}
-                {suitSymbol(card.suit)}
-            </Text>
-        </View>
-    );
-}
 
 export default function TableCenter({
     trick
@@ -111,33 +91,37 @@ export default function TableCenter({
 
             <View style={styles.northPosition}>
                 {north && (
-                    <PlayedCardView
-                        card={north.card}
-                    />
+                    <AnimatedPlayedCard
+        		card={north.card}
+      		  	seat={Seat.North}
+    		     />
                 )}
             </View>
 
             <View style={styles.westPosition}>
                 {west && (
-                    <PlayedCardView
-                        card={west.card}
-                    />
+                    <AnimatedPlayedCard
+        		card={west.card}
+      		  	seat={Seat.West}
+    		     />
                 )}
             </View>
 
             <View style={styles.eastPosition}>
                 {east && (
-                    <PlayedCardView
-                        card={east.card}
-                    />
+                    <AnimatedPlayedCard
+        		card={east.card}
+      		  	seat={Seat.East}
+    		     />
                 )}
             </View>
 
             <View style={styles.southPosition}>
                 {south && (
-                    <PlayedCardView
-                        card={south.card}
-                    />
+                    <AnimatedPlayedCard
+        		card={south.card}
+      		  	seat={Seat.South}
+    		     />
                 )}
             </View>
         </View>

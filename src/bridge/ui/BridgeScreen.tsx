@@ -35,6 +35,11 @@ export default function BridgeScreen() {
         0
     );
 
+const [
+    historyVisible,
+    setHistoryVisible
+] = useState(false);
+
     const [
         game,
         setGame
@@ -194,19 +199,24 @@ export default function BridgeScreen() {
         );
 
     return (
-        <BridgeTable
-            game={game}
-            displayedTrick={displayedTrick}
-            dummyVisible={dummyVisible}
-            southCanPlay={southCanPlay}
-            northCanPlay={northCanPlay}
-            statusMessage={statusMessage}
-	    showCompletedTrick={
-            	showCompletedTrick
-            }
-            onPlayHumanCard={playHumanCard}
-            onNewHand={startNewHand}
-        />
+<BridgeTable
+    game={game}
+    displayedTrick={displayedTrick}
+    dummyVisible={dummyVisible}
+    southCanPlay={southCanPlay}
+    northCanPlay={northCanPlay}
+    statusMessage={statusMessage}
+    showCompletedTrick={showCompletedTrick}
+    historyVisible={historyVisible}
+    onShowHistory={() =>
+        setHistoryVisible(true)
+    }
+    onCloseHistory={() =>
+        setHistoryVisible(false)
+    }
+    onPlayHumanCard={playHumanCard}
+    onNewHand={startNewHand}
+/>
     );
 }
 
