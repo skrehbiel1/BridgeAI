@@ -13,12 +13,11 @@ import { Game } from "../core/Game";
 import { Seat } from "../core/Seat";
 import { Trick } from "../play/Trick";
 
-import DummyHandView from "./DummyHandView";
 import SouthHandView from "./SouthHandView";
 import TablePlayArea from "./TablePlayArea";
+import NorthArea from "./NorthArea";
 
 import HandView from "./HandView";
-import SeatView from "./SeatView";
 import TableCenter from "./TableCenter";
 import TableHeader from "./TableHeader";
 
@@ -81,34 +80,17 @@ showCompletedTrick,
                     onNewHand={onNewHand}
                 />
 
-                <View style={styles.northRow}>
-                    {dummyVisible ? (
-     <DummyHandView
+<NorthArea
     hand={northHand}
+    dummyVisible={dummyVisible}
     leadSuit={activeLeadSuit}
     enabled={northCanPlay}
-    onCardPlayed={
-        index =>
-            onPlayHumanCard(
-                Seat.North,
-                index
-            )
+    active={
+        !showCompletedTrick &&
+        game.currentSeat === Seat.North
     }
+    onCardPlayed={onPlayHumanCard}
 />
-                    ) : (
-                        <SeatView
-                            name="North"
-                            cardCount={
-                                northHand.cards.length
-                            }
-                            orientation="horizontal"
-                            active={
-                                game.currentSeat ===
-                                Seat.North
-                            }
-                        />
-                    )}
-                </View>
 
 <TablePlayArea
     game={game}
@@ -155,13 +137,6 @@ const styles = StyleSheet.create({
         paddingTop: 6,
         paddingHorizontal: 8,
         paddingBottom: 8
-    },
-
-    northRow: {
-        minHeight: 94,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 4
     },
 
 
