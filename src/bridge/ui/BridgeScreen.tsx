@@ -40,6 +40,12 @@ const [
     setHistoryVisible
 ] = useState(false);
 
+const [
+    collectingCompletedTrick,
+    setCollectingCompletedTrick
+] = useState(false);
+
+
     const [
         game,
         setGame
@@ -104,20 +110,36 @@ const [
         showCompletedTrick
     ]);
 
-    useEffect(() => {
-        if (!showCompletedTrick) {
-            return;
-        }
+useEffect(() => {
+    if (!showCompletedTrick) {
+        return;
+    }
 
-        const timer = setTimeout(() => {
-            setShowCompletedTrick(false);
+    const collectTimer =
+        setTimeout(() => {
+            setCollectingCompletedTrick(
+                true
+            );
+        }, 700);
+
+    const clearTimer =
+        setTimeout(() => {
+            setCollectingCompletedTrick(
+                false
+            );
+
+            setShowCompletedTrick(
+                false
+            );
+
             redraw();
-        }, COMPLETED_TRICK_DELAY_MS);
+        }, 1050);
 
-        return () => {
-            clearTimeout(timer);
-        };
-    }, [showCompletedTrick]);
+    return () => {
+        clearTimeout(collectTimer);
+        clearTimeout(clearTimer);
+    };
+}, [showCompletedTrick]);
 
     function playHumanCard(
         seat: Seat,
@@ -165,10 +187,12 @@ const [
         redraw();
     }
 
-    function startNewHand(): void {
-        setShowCompletedTrick(false);
-        setGame(createGame());
-    }
+function startNewHand(): void {
+    setShowCompletedTrick(false);
+    setCollectingCompletedTrick(false);
+    setHistoryVisible(false);
+    setGame(createGame());
+}
 
     const displayedTrick =
         showCompletedTrick &&
@@ -198,10 +222,22 @@ const [
             showCompletedTrick
         );
 
+    const completedTrickWinner =
+        showCompletedTrick
+        ? game.trickHistory().at(-1)?.winner
+        : undefined;
+
+
     return (
 <BridgeTable
     game={game}
     displayedTrick={displayedTrick}
+    completedTrickWinner={
+        completedTrickWinner
+    }
+    collectingCompletedTrick={
+        collectingCompletedTrick
+    }
     dummyVisible={dummyVisible}
     southCanPlay={southCanPlay}
     northCanPlay={northCanPlay}

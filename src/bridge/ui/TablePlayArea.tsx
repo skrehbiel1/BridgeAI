@@ -16,12 +16,16 @@ interface Props {
     game: Game;
     displayedTrick: Trick;
     showCompletedTrick: boolean;
+    completedTrickWinner?: Seat;
+    collectingCompletedTrick: boolean;
 }
 
 export default function TablePlayArea({
     game,
     displayedTrick,
-    showCompletedTrick
+    showCompletedTrick,
+    completedTrickWinner,
+    collectingCompletedTrick
 }: Props) {
     return (
         <View style={styles.middleRow}>
@@ -43,9 +47,17 @@ export default function TablePlayArea({
             </View>
 
             <View style={styles.centerArea}>
-                <TableCenter
-                    trick={displayedTrick}
-                />
+<TableCenter
+    trick={displayedTrick}
+    winnerSeat={
+        showCompletedTrick
+            ? completedTrickWinner
+            : undefined
+    }
+    collecting={
+        collectingCompletedTrick
+    }
+/>
             </View>
 
             <View style={styles.sideSeat}>

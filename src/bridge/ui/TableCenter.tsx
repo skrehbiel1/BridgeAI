@@ -19,6 +19,8 @@ import { suitSymbol } from "../cards/SuitDisplay";
 
 interface Props {
     trick: Trick;
+    winnerSeat?: Seat;
+    collecting?: boolean;
 }
 
 interface PlayedCardProps {
@@ -61,7 +63,9 @@ function suitColor(
 
 
 export default function TableCenter({
-    trick
+    trick,
+    winnerSeat,
+    collecting = false
 }: Props) {
     const cardAt = (
         seat: Seat
@@ -89,41 +93,73 @@ export default function TableCenter({
                 Current Trick
             </Text>
 
-            <View style={styles.northPosition}>
-                {north && (
-                    <AnimatedPlayedCard
-        		card={north.card}
-      		  	seat={Seat.North}
-    		     />
-                )}
-            </View>
+<View style={styles.northPosition}>
+    {north && (
+        <AnimatedPlayedCard
+            card={north.card}
+            seat={Seat.North}
+            winner={
+                winnerSeat === Seat.North
+            }
+collectToSeat={
+    collecting
+        ? winnerSeat
+        : undefined
+}
+        />
+    )}
+</View>
 
-            <View style={styles.westPosition}>
-                {west && (
-                    <AnimatedPlayedCard
-        		card={west.card}
-      		  	seat={Seat.West}
-    		     />
-                )}
-            </View>
+<View style={styles.westPosition}>
+    {west && (
+        <AnimatedPlayedCard
+            card={west.card}
+            seat={Seat.West}
+            winner={
+                winnerSeat === Seat.West
+            }
+collectToSeat={
+    collecting
+        ? winnerSeat
+        : undefined
+}
+        />
+    )}
+</View>
 
-            <View style={styles.eastPosition}>
-                {east && (
-                    <AnimatedPlayedCard
-        		card={east.card}
-      		  	seat={Seat.East}
-    		     />
-                )}
-            </View>
+<View style={styles.eastPosition}>
+    {east && (
+        <AnimatedPlayedCard
+            card={east.card}
+            seat={Seat.East}
+            winner={
+                winnerSeat === Seat.East
+            }
+collectToSeat={
+    collecting
+        ? winnerSeat
+        : undefined
+}
+        />
+    )}
+</View>
 
-            <View style={styles.southPosition}>
-                {south && (
-                    <AnimatedPlayedCard
-        		card={south.card}
-      		  	seat={Seat.South}
-    		     />
-                )}
-            </View>
+<View style={styles.southPosition}>
+    {south && (
+        <AnimatedPlayedCard
+            card={south.card}
+            seat={Seat.South}
+            winner={
+                winnerSeat === Seat.South
+            }
+collectToSeat={
+    collecting
+        ? winnerSeat
+        : undefined
+}
+        />
+    )}
+</View>
         </View>
     );
 }

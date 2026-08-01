@@ -35,7 +35,8 @@ interface Props {
     northCanPlay: boolean;
     statusMessage: string;
     showCompletedTrick: boolean;
-
+completedTrickWinner?: Seat;
+    collectingCompletedTrick: boolean;
     historyVisible: boolean;
     onShowHistory: () => void;
     onCloseHistory: () => void;
@@ -56,6 +57,8 @@ export default function BridgeTable({
     northCanPlay,
     statusMessage,
     showCompletedTrick,
+    completedTrickWinner,
+    collectingCompletedTrick,
     historyVisible,
     onShowHistory,
     onCloseHistory,
@@ -120,11 +123,14 @@ export default function BridgeTable({
 <TablePlayArea
     game={game}
     displayedTrick={displayedTrick}
-    showCompletedTrick={
-        showCompletedTrick
+    showCompletedTrick={showCompletedTrick}
+    completedTrickWinner={
+        completedTrickWinner
+    }
+    collectingCompletedTrick={
+        collectingCompletedTrick
     }
 />
-
   
  
 <SouthHandView
