@@ -1,464 +1,337 @@
-import { Hand } from "../cards/Hand";
 import { Card } from "../cards/Card";
-import { Trick } from "../play/Trick";
+import { Hand } from "../cards/Hand";
 
 import {
     Seat,
-    nextSeat,
+    nextSeat
 } from "./Seat";
 
 import {
     Deal,
-    DealResult,
+    DealResult
 } from "./Deal";
 
-import {
-    Table,
-} from "./Table";
+import { Table } from "./Table";
+import { Contract } from "../play/Contract";
+import { PlayedCard } from "../play/PlayedCard";
+import { PlayValidator } from "../play/PlayValidator";
+import { Trick } from "../play/Trick";
+import { TrickWinner } from "../play/TrickWinner";
 
 import {
-    Contract,
-} from "../play/Contract";
-
-import {
-    PlayedCard,
-} from "../play/PlayedCard";
-
-import {
-    PlayValidator,
-} from "../play/PlayValidator";
-
-import {
-    TrickWinner,
-} from "../play/TrickWinner";
-
-import {
-    partnershipOf,
+    partnershipOf
 } from "./Partnership";
 
 import {
-    PlayerController,
+    PlayerController
 } from "./PlayerController";
 
 import {
-    DeclarerAI,
-} from "../ai/DeclarerAI";
-
-import {
-    DefenseAI,
+    DefenseAI
 } from "../ai/DefenseAI";
 
-
-
 export class Game {
-
-
     hands: DealResult;
-
 
     table: Table;
 
-
     currentSeat: Seat;
-
 
     controllers:
         Record<Seat, PlayerController>;
 
-    lastCompletedTrick: Trick | null = null;
+    openingLeadMade = false;
+
+    lastCompletedTrick:
+        Trick | null = null;
 
     constructor(
-
         public contract: Contract,
-
         openingLeader: Seat
-
     ) {
-
-
         this.hands =
             Deal.create();
-
-
 
         this.table =
             new Table();
 
-
-
         this.currentSeat =
             openingLeader;
 
-
-
+        /*
+         * South is declarer.
+         * North is dummy.
+         *
+         * Both are controlled by the human UI.
+         * East and West are controlled by AI.
+         */
         this.controllers = {
-
-
             [Seat.North]:
-
                 new PlayerController(
-
-                    Seat.North,
-
-                    new DeclarerAI()
-
+                    Seat.North
                 ),
-
-
 
             [Seat.East]:
-
                 new PlayerController(
-
                     Seat.East,
-
                     new DefenseAI()
-
                 ),
-
-
 
             [Seat.South]:
-
                 new PlayerController(
-
                     Seat.South
-
                 ),
 
-
-
             [Seat.West]:
-
                 new PlayerController(
-
                     Seat.West,
-
                     new DefenseAI()
-
                 )
-
         };
-
-
     }
-
-
-
 
     handOf(
         seat: Seat
     ): Hand {
-
         return this.hands[seat];
-
     }
 
-
-
+    isHumanControlled(
+        seat: Seat
+    ): boolean {
+        return (
+            !this.controllers[
+                seat
+            ].isComputer()
+        );
+    }
 
     playCard(
-
         seat: Seat,
-
         card: Card
-
     ): boolean {
-
-
-
-        if(
-
-            seat !== this.currentSeat
-
+        if (
+            seat !==
+            this.currentSeat
         ) {
-
             return false;
-
         }
-
-
-
 
         const hand =
             this.handOf(seat);
 
-
-
-
         const legal =
-
             PlayValidator.isLegalPlay(
-
                 hand,
-
                 card,
-
                 this.table
                     .currentTrick
                     .leadSuit
-
             );
 
-
-
-
-        if(!legal){
-
+        if (!legal) {
             return false;
-
         }
-
-
-
 
         hand.remove(card);
 
+        const played:
+            PlayedCard = {
+                seat,
+                card
+            };
 
+        this.table
+            .currentTrick
+            .addCard(played);
 
-
-        const played: PlayedCard = {
-
-
-            seat,
-
-            card
-
-
-        };
-
-
-
-
-        this.table.currentTrick
-
-            .addCard(
-
-                played
-
-            );
-
-
-
-
-
-        if(
-
-            this.table.currentTrick
-
-                .isComplete()
-
+        /*
+         * The first successfully played card is
+         * the opening lead. Dummy may now appear.
+         */
+        if (
+            !this.openingLeadMade
         ) {
-
-
-            this.finishTrick();
-
-
-
-        } else {
-
-
-
-            this.currentSeat =
-
-                nextSeat(
-
-                    this.currentSeat
-
-                );
-
+            this.openingLeadMade =
+                true;
         }
 
-
-
+        if (
+            this.table
+                .currentTrick
+                .isComplete()
+        ) {
+            this.finishTrick();
+        } else {
+            this.currentSeat =
+                nextSeat(
+                    this.currentSeat
+                );
+        }
 
         return true;
-
-
     }
 
+    playComputerTurn():
+        boolean {
+        const seat =
+            this.currentSeat;
 
+        const controller =
+            this.controllers[seat];
 
-
-
-playComputerTurn(): boolean {
-
-    const seat = this.currentSeat;
-
-    const controller =
-        this.controllers[seat];
-
-    if (!controller.isComputer()) {
-        return false;
-    }
-
-    const hand =
-        this.handOf(seat);
-
-    if (hand.cards.length === 0) {
-        return false;
-    }
-
-    const leadSuit =
-        this.table.currentTrick.leadSuit;
-
-    /*
-     * Ask the AI for its preferred card.
-     */
-const aiCard =
-    controller.ai?.chooseCard(
-        seat,
-        hand,
-        this.table.currentTrick,
-        this.contract.trump
-    );
-
-    /*
-     * Use the AI card only if it is legal.
-     */
-    if (
-        aiCard &&
-        PlayValidator.isLegalPlay(
-            hand,
-            aiCard,
-            leadSuit
-        )
-    ) {
-        return this.playCard(
-            seat,
-            aiCard
-        );
-    }
-
-    /*
-     * Fallback: find any legal card.
-     * This prevents the game from freezing
-     * when an AI returns an invalid choice.
-     */
-const fallbackCard =
-    hand.cards.find(card =>
-        PlayValidator.isLegalPlay(
-            hand,
-            card,
-            leadSuit
-        )
-    );
-
-if (!fallbackCard) {
-    return false;
-}
-
-return this.playCard(
-    seat,
-    fallbackCard
-);
-}
-
-
-
-
-
-
-    playAllComputerTurns(){
-
-
-
-        while(
-
-            this.currentSeat !== Seat.South
-
-            &&
-
-            !this.isFinished()
-
-        ){
-
-
-            this.playComputerTurn();
-
-
+        if (
+            !controller.isComputer()
+        ) {
+            return false;
         }
 
+        const hand =
+            this.handOf(seat);
 
+        if (
+            hand.cards.length === 0
+        ) {
+            return false;
+        }
+
+        const leadSuit =
+            this.table
+                .currentTrick
+                .leadSuit;
+
+        const aiCard =
+            controller.ai?.chooseCard(
+                seat,
+                hand,
+                this.table
+                    .currentTrick,
+                this.contract.trump
+            );
+
+        if (
+            aiCard &&
+            PlayValidator.isLegalPlay(
+                hand,
+                aiCard,
+                leadSuit
+            )
+        ) {
+            return this.playCard(
+                seat,
+                aiCard
+            );
+        }
+
+        /*
+         * Safety fallback.
+         *
+         * A correctly implemented AI should
+         * already return a legal card, but this
+         * keeps the game from freezing.
+         */
+        const fallbackCard =
+            hand.cards.find(
+                card =>
+                    PlayValidator
+                        .isLegalPlay(
+                            hand,
+                            card,
+                            leadSuit
+                        )
+            );
+
+        if (!fallbackCard) {
+            return false;
+        }
+
+        return this.playCard(
+            seat,
+            fallbackCard
+        );
     }
 
+    playAllComputerTurns():
+        void {
+        while (
+            !this.isFinished() &&
+            this.controllers[
+                this.currentSeat
+            ].isComputer()
+        ) {
+            const played =
+                this.playComputerTurn();
 
-private finishTrick(): void {
-    const completedTrick =
-        this.table.currentTrick;
+            if (!played) {
+                break;
+            }
+        }
+    }
 
-    const winner =
-        TrickWinner.determine(
-            completedTrick.cards,
-            this.contract.trump
-        );
-
-    /*
-     * Preserve all four played cards so the UI
-     * can display the completed trick briefly.
-     */
-    this.lastCompletedTrick =
-        new Trick();
-
-    this.lastCompletedTrick.cards =
-        [...completedTrick.cards];
-
-    this.lastCompletedTrick.leadSuit =
-        completedTrick.leadSuit;
-
-    this.table.awardTrick(
-        partnershipOf(winner)
-    );
-
-    this.table.currentTrick.clear();
-
-    this.currentSeat = winner;
-}
-
-
-
-
-
-
-    isFinished(): boolean {
-
-
-
+    isFinished():
+        boolean {
         return (
-
-            this.table.totalTricks()
-
-            ===
-
+            this.table.totalTricks() ===
             13
-
         );
-
-
     }
 
-
-
-
-
-
-    tricksWon(){
-
+    tricksWon() {
         return {
-
             NS:
-
                 this.table.nsTricks,
 
-
             EW:
-
                 this.table.ewTricks
-
         };
-
     }
 
+    private finishTrick():
+        void {
+        const completedCards = [
+            ...this.table
+                .currentTrick
+                .cards
+        ];
 
+        const completedLeadSuit =
+            this.table
+                .currentTrick
+                .leadSuit;
 
+        const winner =
+            TrickWinner.determine(
+                completedCards,
+                this.contract.trump
+            );
+
+        /*
+         * Preserve the completed trick so the UI
+         * can display all four cards briefly.
+         */
+        const savedTrick =
+            new Trick();
+
+        savedTrick.cards =
+            completedCards;
+
+        savedTrick.leadSuit =
+            completedLeadSuit;
+
+        this.lastCompletedTrick =
+            savedTrick;
+
+        this.table.awardTrick(
+            partnershipOf(
+                winner
+            )
+        );
+
+        this.table
+            .currentTrick
+            .clear();
+
+        this.currentSeat =
+            winner;
+    }
 }
