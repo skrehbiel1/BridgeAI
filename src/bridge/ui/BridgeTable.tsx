@@ -15,6 +15,7 @@ import { Trick } from "../play/Trick";
 
 import DummyHandView from "./DummyHandView";
 import SouthHandView from "./SouthHandView";
+import TablePlayArea from "./TablePlayArea";
 
 import HandView from "./HandView";
 import SeatView from "./SeatView";
@@ -28,6 +29,7 @@ interface Props {
     southCanPlay: boolean;
     northCanPlay: boolean;
     statusMessage: string;
+showCompletedTrick: boolean;
 
     onPlayHumanCard: (
         seat: Seat,
@@ -44,6 +46,7 @@ export default function BridgeTable({
     southCanPlay,
     northCanPlay,
     statusMessage,
+showCompletedTrick,
     onPlayHumanCard,
     onNewHand
 }: Props) {
@@ -107,48 +110,15 @@ export default function BridgeTable({
                     )}
                 </View>
 
-                <View style={styles.middleRow}>
-                    <View style={styles.sideSeat}>
-                        <SeatView
-                            name="West"
-                            cardCount={
-                                game.handOf(
-                                    Seat.West
-                                ).cards.length
-                            }
-                            orientation="vertical"
-                            active={
-                                game.currentSeat ===
-                                Seat.West
-                            }
-                        />
-                    </View>
+<TablePlayArea
+    game={game}
+    displayedTrick={displayedTrick}
+    showCompletedTrick={
+        showCompletedTrick
+    }
+/>
 
-                    <View style={styles.centerArea}>
-                        <TableCenter
-                            trick={
-                                displayedTrick
-                            }
-                        />
-                    </View>
-
-                    <View style={styles.sideSeat}>
-                        <SeatView
-                            name="East"
-                            cardCount={
-                                game.handOf(
-                                    Seat.East
-                                ).cards.length
-                            }
-                            orientation="vertical"
-                            active={
-                                game.currentSeat ===
-                                Seat.East
-                            }
-                        />
-                    </View>
-                </View>
-
+  
  
 <SouthHandView
     hand={southHand}
@@ -192,29 +162,6 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         paddingVertical: 4
-    },
-
-    middleRow: {
-        flex: 1,
-        width: "100%",
-        minHeight: 175,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between"
-    },
-
-    sideSeat: {
-        width: 72,
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 2
-    },
-
-    centerArea: {
-        flex: 1,
-        alignItems: "center",
-        justifyContent: "center",
-        paddingHorizontal: 2
     },
 
 

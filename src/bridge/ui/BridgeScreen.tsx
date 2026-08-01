@@ -201,6 +201,9 @@ export default function BridgeScreen() {
             southCanPlay={southCanPlay}
             northCanPlay={northCanPlay}
             statusMessage={statusMessage}
+	    showCompletedTrick={
+            	showCompletedTrick
+            }
             onPlayHumanCard={playHumanCard}
             onNewHand={startNewHand}
         />
