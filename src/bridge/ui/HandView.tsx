@@ -1,13 +1,17 @@
 import React from "react";
 
 import {
+    Pressable,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View
 } from "react-native";
 
-import { Card, Suit } from "../cards/Card";
+import {
+    Card,
+    Suit
+} from "../cards/Card";
+
 import { Hand } from "../cards/Hand";
 import { suitSymbol } from "../cards/SuitDisplay";
 
@@ -15,33 +19,60 @@ interface Props {
     hand: Hand;
     leadSuit?: Suit;
     enabled?: boolean;
-    onCardPlayed?: (index: number) => void;
+    onCardPlayed?: (
+        index: number
+    ) => void;
 }
 
-function displayRank(rank: number): string {
+interface SuitRowProps {
+    suit: Suit;
+    hand: Hand;
+    leadSuit?: Suit;
+    enabled: boolean;
+    onCardPlayed?: (
+        index: number
+    ) => void;
+}
+
+const SUIT_ORDER: Suit[] = [
+    Suit.Spades,
+    Suit.Hearts,
+    Suit.Diamonds,
+    Suit.Clubs
+];
+
+function displayRank(
+    rank: number
+): string {
     switch (rank) {
         case 14:
             return "A";
+
         case 13:
             return "K";
+
         case 12:
             return "Q";
+
         case 11:
             return "J";
+
         default:
-            return rank.toString();
+            return String(rank);
     }
 }
 
-function suitColor(suit: Suit): string {
+function suitColor(
+    suit: Suit
+): string {
     if (
         suit === Suit.Hearts ||
         suit === Suit.Diamonds
     ) {
-        return "#F44336";
+        return "#D32F2F";
     }
 
-    return "#222222";
+    return "#151515";
 }
 
 function isLegalCard(
@@ -53,25 +84,11 @@ function isLegalCard(
         return true;
     }
 
-    const mustFollowSuit =
-        hand.cards.some(
-            current =>
-                current.suit === leadSuit
-        );
-
-    if (!mustFollowSuit) {
+    if (!hand.hasSuit(leadSuit)) {
         return true;
     }
 
     return card.suit === leadSuit;
-}
-
-interface SuitRowProps {
-    suit: Suit;
-    hand: Hand;
-    leadSuit?: Suit;
-    enabled: boolean;
-    onCardPlayed?: (index: number) => void;
 }
 
 function SuitRow({
@@ -81,9 +98,11 @@ function SuitRow({
     enabled,
     onCardPlayed
 }: SuitRowProps) {
-    const cards = hand.cards.filter(
-        card => card.suit === suit
-    );
+    const cards =
+        hand.cards.filter(
+            card =>
+                card.suit === suit
+        );
 
     return (
         <View style={styles.suitRow}>
@@ -91,7 +110,8 @@ function SuitRow({
                 style={[
                     styles.suitSymbol,
                     {
-                        color: suitColor(suit)
+                        color:
+                            suitColor(suit)
                     }
                 ]}
             >
@@ -106,7 +126,7 @@ function SuitRow({
                 )}
 
                 {cards.map(card => {
-                    const index =
+                    const handIndex =
                         hand.cards.findIndex(
                             current =>
                                 current.suit ===
@@ -124,33 +144,53 @@ function SuitRow({
                         );
 
                     return (
-                        <TouchableOpacity
-                            key={`${card.suit}-${card.rank}`}
+                        <Pressable
+                            key={
+                                `${card.suit}-${card.rank}`
+                            }
+                            accessibilityRole="button"
+                            accessibilityLabel={
+                                `${displayRank(card.rank)} ` +
+                                `${suitSymbol(card.suit)}`
+                            }
                             disabled={!legal}
-                            style={styles.rankButton}
                             onPress={() => {
                                 if (
                                     legal &&
-                                    index >= 0 &&
-                                    onCardPlayed
+                                    handIndex >= 0
                                 ) {
-                                    onCardPlayed(index);
+                                    onCardPlayed?.(
+                                        handIndex
+                                    );
                                 }
                             }}
+                            style={({ pressed }) => [
+                                styles.rankButton,
+                                legal &&
+                                    styles.legalButton,
+                                pressed &&
+                                    legal &&
+                                    styles.pressedButton
+                            ]}
                         >
                             <Text
                                 style={[
                                     styles.rankText,
                                     {
-                                        color: legal
-                                            ? suitColor(suit)
-                                            : "#D2D2D2"
+                                        color:
+                                            legal
+                                                ? suitColor(
+                                                    suit
+                                                )
+                                                : "#C7C7C7"
                                     }
                                 ]}
                             >
-                                {displayRank(card.rank)}
+                                {displayRank(
+                                    card.rank
+                                )}
                             </Text>
-                        </TouchableOpacity>
+                        </Pressable>
                     );
                 })}
             </View>
@@ -166,37 +206,18 @@ export default function HandView({
 }: Props) {
     return (
         <View style={styles.container}>
-            <SuitRow
-                suit={Suit.Spades}
-                hand={hand}
-                leadSuit={leadSuit}
-                enabled={enabled}
-                onCardPlayed={onCardPlayed}
-            />
-
-            <SuitRow
-                suit={Suit.Hearts}
-                hand={hand}
-                leadSuit={leadSuit}
-                enabled={enabled}
-                onCardPlayed={onCardPlayed}
-            />
-
-            <SuitRow
-                suit={Suit.Diamonds}
-                hand={hand}
-                leadSuit={leadSuit}
-                enabled={enabled}
-                onCardPlayed={onCardPlayed}
-            />
-
-            <SuitRow
-                suit={Suit.Clubs}
-                hand={hand}
-                leadSuit={leadSuit}
-                enabled={enabled}
-                onCardPlayed={onCardPlayed}
-            />
+            {SUIT_ORDER.map(suit => (
+                <SuitRow
+                    key={suit}
+                    suit={suit}
+                    hand={hand}
+                    leadSuit={leadSuit}
+                    enabled={enabled}
+                    onCardPlayed={
+                        onCardPlayed
+                    }
+                />
+            ))}
         </View>
     );
 }
@@ -204,28 +225,36 @@ export default function HandView({
 const styles = StyleSheet.create({
     container: {
         width: "100%",
-        maxWidth: 340,
+        maxWidth: 350,
         backgroundColor: "#FFFFFF",
-        borderRadius: 10,
         borderWidth: 1,
-        borderColor: "#D0D0D0",
+        borderColor: "#D3D3D3",
+        borderRadius: 11,
         paddingHorizontal: 10,
-        paddingVertical: 4
+        paddingVertical: 5,
+        elevation: 3,
+        shadowColor: "#000000",
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        shadowOffset: {
+            width: 0,
+            height: 2
+        }
     },
 
     suitRow: {
-        minHeight: 36,
+        minHeight: 37,
         flexDirection: "row",
         alignItems: "center"
     },
 
     suitSymbol: {
         width: 42,
-        fontSize: 30,
-        fontWeight: "bold",
+        fontSize: 29,
+        fontWeight: "800",
+        lineHeight: 33,
         textAlign: "center",
-        includeFontPadding: false,
-        lineHeight: 34
+        includeFontPadding: false
     },
 
     rankRow: {
@@ -238,21 +267,37 @@ const styles = StyleSheet.create({
     rankButton: {
         minWidth: 34,
         height: 32,
+        marginRight: 2,
         paddingHorizontal: 4,
-        justifyContent: "center",
-        alignItems: "center"
+        borderRadius: 6,
+        alignItems: "center",
+        justifyContent: "center"
+    },
+
+    legalButton: {
+        backgroundColor: "#F1F8E9"
+    },
+
+    pressedButton: {
+        backgroundColor: "#C8E6C9",
+        transform: [
+            {
+                scale: 0.94
+            }
+        ]
     },
 
     rankText: {
         fontSize: 19,
-        fontWeight: "bold",
-        includeFontPadding: false,
-        lineHeight: 24
+        fontWeight: "800",
+        lineHeight: 23,
+        includeFontPadding: false
     },
 
     voidText: {
-        fontSize: 19,
-        color: "#AAAAAA",
-        paddingLeft: 4
+        color: "#A0A0A0",
+        fontSize: 20,
+        paddingLeft: 5,
+        includeFontPadding: false
     }
 });

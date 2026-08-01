@@ -1,9 +1,9 @@
 import React from "react";
 
 import {
-    View,
+    StyleSheet,
     Text,
-    StyleSheet
+    View
 } from "react-native";
 
 import CardBackView from "./CardBackView";
@@ -15,25 +15,33 @@ interface Props {
     active?: boolean;
 }
 
+const MAX_VISIBLE_CARD_BACKS = 7;
+
 export default function SeatView({
     name,
     cardCount,
     orientation = "horizontal",
     active = false
 }: Props) {
-    const visibleCards = Math.min(cardCount, 7);
+    const visibleCardCount =
+        Math.min(
+            cardCount,
+            MAX_VISIBLE_CARD_BACKS
+        );
 
     return (
         <View
             style={[
                 styles.container,
-                active && styles.activeContainer
+                active &&
+                    styles.activeContainer
             ]}
         >
             <Text
                 style={[
                     styles.name,
-                    active && styles.activeName
+                    active &&
+                        styles.activeName
                 ]}
             >
                 {name}
@@ -41,42 +49,46 @@ export default function SeatView({
 
             <View
                 style={[
-                    styles.cards,
-                    orientation === "vertical"
-                        ? styles.verticalCards
-                        : styles.horizontalCards
+                    styles.cardStack,
+                    orientation === "horizontal"
+                        ? styles.horizontalStack
+                        : styles.verticalStack
                 ]}
             >
                 {Array.from({
-                    length: visibleCards
+                    length: visibleCardCount
                 }).map((_, index) => (
                     <View
                         key={index}
                         style={
-                            orientation === "vertical"
-                                ? {
-                                    marginTop:
-                                        index === 0
-                                            ? 0
-                                            : -27
-                                }
-                                : {
-                                    marginLeft:
-                                        index === 0
-                                            ? 0
-                                            : -23
-                                }
+                            orientation ===
+                            "horizontal"
+                                ? [
+                                    styles.horizontalCard,
+                                    index > 0 &&
+                                        styles.horizontalOverlap
+                                ]
+                                : [
+                                    styles.verticalCard,
+                                    index > 0 &&
+                                        styles.verticalOverlap
+                                ]
                         }
                     >
                         <CardBackView
-                            orientation={orientation}
+                            orientation={
+                                orientation
+                            }
                         />
                     </View>
                 ))}
             </View>
 
-            <Text style={styles.count}>
-                {cardCount} cards
+            <Text style={styles.cardCount}>
+                {cardCount}{" "}
+                {cardCount === 1
+                    ? "card"
+                    : "cards"}
             </Text>
         </View>
     );
@@ -84,46 +96,70 @@ export default function SeatView({
 
 const styles = StyleSheet.create({
     container: {
+        minWidth: 68,
         alignItems: "center",
         justifyContent: "center",
-        padding: 5,
         borderRadius: 10,
-        minWidth: 72
+        paddingHorizontal: 5,
+        paddingVertical: 4
     },
 
     activeContainer: {
-        backgroundColor: "rgba(255, 255, 255, 0.18)"
+        backgroundColor:
+            "rgba(255, 235, 59, 0.18)"
     },
 
     name: {
         color: "#FFFFFF",
         fontSize: 15,
         fontWeight: "700",
-        marginBottom: 4
+        lineHeight: 19,
+        marginBottom: 3,
+        includeFontPadding: false
     },
 
     activeName: {
         color: "#FFEB3B"
     },
 
-    cards: {
+    cardStack: {
         alignItems: "center",
         justifyContent: "center"
     },
 
-    horizontalCards: {
-        flexDirection: "row",
-        minWidth: 100
+    horizontalStack: {
+        minWidth: 104,
+        height: 50,
+        flexDirection: "row"
     },
 
-    verticalCards: {
-        flexDirection: "column",
-        minHeight: 90
+    verticalStack: {
+        width: 30,
+        minHeight: 91,
+        flexDirection: "column"
     },
 
-    count: {
-        color: "#FFFFFF",
-        fontSize: 12,
-        marginTop: 3
+    horizontalCard: {
+        zIndex: 1
+    },
+
+    horizontalOverlap: {
+        marginLeft: -22
+    },
+
+    verticalCard: {
+        zIndex: 1
+    },
+
+    verticalOverlap: {
+        marginTop: -27
+    },
+
+    cardCount: {
+        color: "#E8F5E9",
+        fontSize: 11,
+        lineHeight: 15,
+        marginTop: 3,
+        includeFontPadding: false
     }
 });

@@ -5,6 +5,7 @@ import React, {
 } from "react";
 
 import {
+    Pressable,
     StyleSheet,
     Text,
     View
@@ -26,6 +27,17 @@ import TableCenter from "./TableCenter";
 const COMPUTER_PLAY_DELAY_MS = 650;
 const COMPLETED_TRICK_DELAY_MS = 1000;
 
+function createGame(): Game {
+    return new Game(
+        new Contract(
+            4,
+            Suit.Spades,
+            Seat.South
+        ),
+        Seat.West
+    );
+}
+
 export default function BridgeTable() {
     /*
      * Game mutates its internal state.
@@ -41,16 +53,11 @@ export default function BridgeTable() {
         0
     );
 
-    const [game] = useState(
-        () =>
-            new Game(
-                new Contract(
-                    4,
-                    Suit.Spades,
-                    Seat.South
-                ),
-                Seat.West
-            )
+    const [
+        game,
+        setGame
+    ] = useState<Game>(
+        createGame
     );
 
     /*
@@ -64,9 +71,6 @@ export default function BridgeTable() {
 
     /*
      * Play one computer card at a time.
-     *
-     * Computer play pauses while a completed
-     * trick is being shown.
      */
     useEffect(() => {
         if (
@@ -79,8 +83,8 @@ export default function BridgeTable() {
 
         const timer = setTimeout(() => {
             /*
-             * Check again because the game state
-             * may have changed while waiting.
+             * Check again because the state may
+             * have changed while the timer waited.
              */
             if (
                 showCompletedTrick ||
@@ -121,8 +125,8 @@ export default function BridgeTable() {
     ]);
 
     /*
-     * Keep a completed trick visible briefly,
-     * then allow the next leader to continue.
+     * Keep all four cards visible briefly after
+     * the trick has been completed.
      */
     useEffect(() => {
         if (!showCompletedTrick) {
@@ -184,11 +188,14 @@ export default function BridgeTable() {
         redraw();
     }
 
+    function restartGame(): void {
+        setShowCompletedTrick(false);
+        setGame(createGame());
+    }
+
     /*
-     * The real current trick may already have
-     * been cleared by Game.finishTrick().
-     *
-     * While pausing, show the preserved completed
+     * Game.finishTrick() clears currentTrick.
+     * While pausing, display the saved completed
      * trick instead.
      */
     const displayedTrick =
@@ -198,9 +205,8 @@ export default function BridgeTable() {
             : game.table.currentTrick;
 
     /*
-     * Legal-play highlighting must use the actual
-     * current trick, not the completed trick that
-     * is temporarily being displayed.
+     * Legal-card highlighting must use the real
+     * current trick, not the saved completed one.
      */
     const activeLeadSuit =
         game.table.currentTrick.leadSuit;
@@ -242,14 +248,35 @@ export default function BridgeTable() {
                         </Text>
                     </View>
 
-                    <View style={styles.scorePanel}>
-                        <Text style={styles.scoreText}>
-                            NS {game.table.nsTricks}
-                        </Text>
+                    <View style={styles.rightHeader}>
+                        <View style={styles.scorePanel}>
+                            <Text style={styles.scoreText}>
+                                NS {game.table.nsTricks}
+                            </Text>
 
-                        <Text style={styles.scoreText}>
-                            EW {game.table.ewTricks}
-                        </Text>
+                            <Text style={styles.scoreText}>
+                                EW {game.table.ewTricks}
+                            </Text>
+                        </View>
+
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Deal a new bridge hand"
+                            onPress={restartGame}
+                            style={({ pressed }) => [
+                                styles.newHandButton,
+                                pressed &&
+                                    styles.newHandButtonPressed
+                            ]}
+                        >
+                            <Text
+                                style={
+                                    styles.newHandButtonText
+                                }
+                            >
+                                New Hand
+                            </Text>
+                        </Pressable>
                     </View>
                 </View>
 
@@ -417,6 +444,11 @@ const styles = StyleSheet.create({
         includeFontPadding: false
     },
 
+    rightHeader: {
+        minWidth: 94,
+        alignItems: "stretch"
+    },
+
     scorePanel: {
         minWidth: 68,
         borderRadius: 9,
@@ -433,6 +465,47 @@ const styles = StyleSheet.create({
         lineHeight: 20,
         textAlign: "right",
         includeFontPadding: false
+    },
+
+    newHandButton: {
+        minHeight: 40,
+        marginTop: 7,
+        paddingHorizontal: 13,
+        paddingVertical: 8,
+        borderRadius: 9,
+        borderWidth: 2,
+        borderColor: "#FFF176",
+        backgroundColor: "#FFEB3B",
+        alignItems: "center",
+        justifyContent: "center",
+        elevation: 5,
+        shadowColor: "#000000",
+        shadowOpacity: 0.28,
+        shadowRadius: 4,
+        shadowOffset: {
+            width: 0,
+            height: 3
+        }
+    },
+
+    newHandButtonPressed: {
+        backgroundColor: "#FDD835",
+        borderColor: "#F9A825",
+        opacity: 0.9,
+        transform: [
+            {
+                scale: 0.97
+            }
+        ]
+    },
+
+    newHandButtonText: {
+        color: "#1B1B1B",
+        fontSize: 15,
+        fontWeight: "800",
+        lineHeight: 19,
+        includeFontPadding: false,
+        textAlign: "center"
     },
 
     northRow: {

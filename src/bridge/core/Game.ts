@@ -305,12 +305,13 @@ playComputerTurn(): boolean {
     /*
      * Ask the AI for its preferred card.
      */
-    const aiCard =
-        controller.ai?.chooseCard(
-            seat,
-            hand,
-            this.table.currentTrick
-        );
+const aiCard =
+    controller.ai?.chooseCard(
+        seat,
+        hand,
+        this.table.currentTrick,
+        this.contract.trump
+    );
 
     /*
      * Use the AI card only if it is legal.
