@@ -83,6 +83,8 @@ const [
             const tricksBefore =
                 game.table.totalTricks();
 
+	    
+
             const played =
                 game.playComputerTurn();
 
@@ -166,6 +168,8 @@ useEffect(() => {
         const tricksBefore =
             game.table.totalTricks();
 
+	game.saveHumanDecisionPoint();
+
         const played =
             game.playCard(
                 seat,
@@ -186,6 +190,39 @@ useEffect(() => {
 
         redraw();
     }
+
+function undoToMyTurn(): void {
+    if (
+        !game
+            .canUndoToPreviousHumanDecision()
+    ) {
+        return;
+    }
+
+    /*
+     * Cancel completed-trick display and
+     * collection animations before restoring.
+     */
+    setShowCompletedTrick(false);
+
+    setCollectingCompletedTrick(
+        false
+    );
+
+    setHistoryVisible(false);
+
+    const undone =
+        game
+            .undoToPreviousHumanDecision();
+
+    if (!undone) {
+        return;
+    }
+
+    redraw();
+}
+
+
 
 function startNewHand(): void {
     setShowCompletedTrick(false);
@@ -227,6 +264,8 @@ function startNewHand(): void {
         ? game.trickHistory().at(-1)?.winner
         : undefined;
 
+const canUndo =
+    game.canUndoToPreviousHumanDecision();
 
     return (
 <BridgeTable
@@ -244,6 +283,8 @@ function startNewHand(): void {
     statusMessage={statusMessage}
     showCompletedTrick={showCompletedTrick}
     historyVisible={historyVisible}
+canUndo={canUndo}
+onUndo={undoToMyTurn}
     onShowHistory={() =>
         setHistoryVisible(true)
     }

@@ -40,6 +40,8 @@ completedTrickWinner?: Seat;
     historyVisible: boolean;
     onShowHistory: () => void;
     onCloseHistory: () => void;
+    canUndo: boolean;
+    onUndo: () => void;
 
     onPlayHumanCard: (
         seat: Seat,
@@ -59,6 +61,8 @@ export default function BridgeTable({
     showCompletedTrick,
     completedTrickWinner,
     collectingCompletedTrick,
+    canUndo,
+    onUndo,
     historyVisible,
     onShowHistory,
     onCloseHistory,
@@ -108,6 +112,50 @@ export default function BridgeTable({
     visible={historyVisible}
     onClose={onCloseHistory}
 />
+
+<View style={styles.actionRow}>
+    <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Undo to your previous turn"
+        disabled={!canUndo}
+        onPress={onUndo}
+        style={({ pressed }) => [
+            styles.actionButton,
+            !canUndo &&
+                styles.disabledActionButton,
+            pressed &&
+                canUndo &&
+                styles.actionButtonPressed
+        ]}
+    >
+        <Text
+            style={[
+                styles.actionButtonText,
+                !canUndo &&
+                    styles.disabledActionText
+            ]}
+        >
+            Undo
+        </Text>
+    </Pressable>
+
+    <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open trick history"
+        onPress={onShowHistory}
+        style={({ pressed }) => [
+            styles.actionButton,
+            pressed &&
+                styles.actionButtonPressed
+        ]}
+    >
+        <Text style={styles.actionButtonText}>
+            History
+        </Text>
+    </Pressable>
+</View>
+
+
 <NorthArea
     hand={northHand}
     dummyVisible={dummyVisible}
@@ -190,6 +238,50 @@ historyButtonText: {
         paddingHorizontal: 8,
         paddingBottom: 8
     },
+
+actionRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 6
+},
+
+actionButton: {
+    minWidth: 95,
+    minHeight: 40,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 2,
+    borderColor: "#D7E8DB",
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14
+},
+
+actionButtonPressed: {
+    opacity: 0.75,
+    transform: [
+        {
+            scale: 0.97
+        }
+    ]
+},
+
+actionButtonText: {
+    color: "#173A26",
+    fontSize: 14,
+    fontWeight: "800"
+},
+
+disabledActionButton: {
+    backgroundColor: "#D8DDD9",
+    borderColor: "#C5CBC6"
+},
+
+disabledActionText: {
+    color: "#929892"
+}
+
 
 
 });

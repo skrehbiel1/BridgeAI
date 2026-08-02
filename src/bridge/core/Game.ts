@@ -2,6 +2,18 @@ import { Card } from "../cards/Card";
 import { Hand } from "../cards/Hand";
 
 import {
+    PlayRecord
+} from "../replay/PlayRecord";
+
+import {
+    TrickRecord
+} from "../replay/TrickRecord";
+
+import {
+    BoardHistory
+} from "../replay/BoardHistory";
+
+import {
     Seat,
     nextSeat
 } from "./Seat";
@@ -12,8 +24,15 @@ import {
 } from "./Deal";
 
 import { Table } from "./Table";
-import { Partnership, partnershipOf } from "./Partnership";
-import { PlayerController } from "./PlayerController";
+
+import {
+    Partnership,
+    partnershipOf
+} from "./Partnership";
+
+import {
+    PlayerController
+} from "./PlayerController";
 
 import { Contract } from "../play/Contract";
 import { PlayedCard } from "../play/PlayedCard";
@@ -23,12 +42,27 @@ import { TrickWinner } from "../play/TrickWinner";
 
 import { DefenseAI } from "../ai/DefenseAI";
 
-import { BoardHistory } from "../replay/BoardHistory";
-import { TrickRecord } from "../replay/TrickRecord";
-
 export interface TrickTotals {
     NS: number;
     EW: number;
+}
+
+interface GameSnapshot {
+    hands: Record<Seat, Card[]>;
+
+    currentSeat: Seat;
+
+    currentTrick: PlayedCard[];
+
+    nsTricks: number;
+    ewTricks: number;
+
+    openingLeadMade: boolean;
+
+    lastCompletedTrick:
+        Trick | null;
+
+    history: TrickRecord[];
 }
 
 export class Game {
@@ -49,6 +83,13 @@ export class Game {
     readonly history =
         new BoardHistory();
 
+    /*
+     * Each entry represents the complete game
+     * state immediately before a human card play.
+     */
+    private undoPoints:
+        GameSnapshot[] = [];
+
     constructor(
         public contract: Contract,
         openingLeader: Seat
@@ -66,8 +107,8 @@ export class Game {
          * South is declarer.
          * North is dummy.
          *
-         * The human controls both North and South.
-         * East and West are controlled by the AI.
+         * The human controls North and South.
+         * East and West are computer controlled.
          */
         this.controllers = {
             [Seat.North]:
@@ -108,6 +149,49 @@ export class Game {
         ].isComputer();
     }
 
+    /*
+     * Call immediately before a human plays a card.
+     *
+     * Undo will return to this exact game state,
+     * automatically removing any later AI responses.
+     */
+    saveHumanDecisionPoint(): void {
+        this.undoPoints.push(
+            this.createSnapshot()
+        );
+    }
+
+    /*
+     * Use this if the attempted human play fails.
+     * The unused snapshot should not remain available.
+     */
+    discardLatestUndoPoint(): void {
+        this.undoPoints.pop();
+    }
+
+    canUndoToPreviousHumanDecision():
+        boolean {
+        return (
+            this.undoPoints.length > 0
+        );
+    }
+
+    undoToPreviousHumanDecision():
+        boolean {
+        const snapshot =
+            this.undoPoints.pop();
+
+        if (!snapshot) {
+            return false;
+        }
+
+        this.restoreSnapshot(
+            snapshot
+        );
+
+        return true;
+    }
+
     playCard(
         seat: Seat,
         card: Card
@@ -123,14 +207,16 @@ export class Game {
             this.handOf(seat);
 
         /*
-         * Confirm that the requested card is
-         * actually present in the player's hand.
+         * Confirm that the requested card is still
+         * present in the player's actual hand.
          */
         const cardInHand =
             hand.cards.find(
                 current =>
-                    current.suit === card.suit &&
-                    current.rank === card.rank
+                    current.suit ===
+                        card.suit &&
+                    current.rank ===
+                        card.rank
             );
 
         if (!cardInHand) {
@@ -153,7 +239,9 @@ export class Game {
             return false;
         }
 
-        hand.remove(cardInHand);
+        hand.remove(
+            cardInHand
+        );
 
         const playedCard:
             PlayedCard = {
@@ -163,7 +251,9 @@ export class Game {
 
         this.table
             .currentTrick
-            .addCard(playedCard);
+            .addCard(
+                playedCard
+            );
 
         this.history.recordPlay(
             seat,
@@ -171,8 +261,8 @@ export class Game {
         );
 
         /*
-         * The first successful card play is the
-         * opening lead. Dummy may now be displayed.
+         * The first successful card is the opening
+         * lead. Dummy may now be displayed.
          */
         if (!this.openingLeadMade) {
             this.openingLeadMade =
@@ -213,7 +303,9 @@ export class Game {
         const hand =
             this.handOf(seat);
 
-        if (hand.cards.length === 0) {
+        if (
+            hand.cards.length === 0
+        ) {
             return false;
         }
 
@@ -245,16 +337,16 @@ export class Game {
         }
 
         /*
-         * Safety fallback. Properly implemented AI
-         * classes should already return a legal card.
+         * Safety fallback. The AI should normally
+         * return a legal card itself.
          */
         const fallbackCard =
             hand.cards.find(
-                card =>
+                candidate =>
                     PlayValidator
                         .isLegalPlay(
                             hand,
-                            card,
+                            candidate,
                             leadSuit
                         )
             );
@@ -345,18 +437,26 @@ export class Game {
             );
 
         /*
-         * Save the four cards before clearing the
-         * active trick so the UI can display them
-         * during the completed-trick pause.
+         * Save all four cards so the UI can show
+         * the completed trick before collecting it.
          */
         const savedTrick =
             new Trick();
 
-        savedTrick.cards =
-            completedCards;
+        for (
+            const played of
+            completedCards
+        ) {
+            savedTrick.addCard({
+                seat:
+                    played.seat,
 
-        savedTrick.leadSuit =
-            currentTrick.leadSuit;
+                card:
+                    this.cloneCard(
+                        played.card
+                    )
+            });
+        }
 
         this.lastCompletedTrick =
             savedTrick;
@@ -375,5 +475,255 @@ export class Game {
 
         this.currentSeat =
             winner;
+    }
+
+    private createSnapshot():
+        GameSnapshot {
+        return {
+            hands: {
+                [Seat.North]:
+                    this.cloneCards(
+                        this.handOf(
+                            Seat.North
+                        ).cards
+                    ),
+
+                [Seat.East]:
+                    this.cloneCards(
+                        this.handOf(
+                            Seat.East
+                        ).cards
+                    ),
+
+                [Seat.South]:
+                    this.cloneCards(
+                        this.handOf(
+                            Seat.South
+                        ).cards
+                    ),
+
+                [Seat.West]:
+                    this.cloneCards(
+                        this.handOf(
+                            Seat.West
+                        ).cards
+                    )
+            },
+
+            currentSeat:
+                this.currentSeat,
+
+            currentTrick:
+                this.table
+                    .currentTrick
+                    .cards
+                    .map(
+                        played => ({
+                            seat:
+                                played.seat,
+
+                            card:
+                                this.cloneCard(
+                                    played.card
+                                )
+                        })
+                    ),
+
+            nsTricks:
+                this.table.nsTricks,
+
+            ewTricks:
+                this.table.ewTricks,
+
+            openingLeadMade:
+                this.openingLeadMade,
+
+            lastCompletedTrick:
+                this.cloneTrick(
+                    this.lastCompletedTrick
+                ),
+
+            history:
+                this.cloneHistory(
+                    this.history.tricks
+                )
+        };
+    }
+
+    private restoreSnapshot(
+        snapshot: GameSnapshot
+    ): void {
+        this.hands = {
+            [Seat.North]:
+                this.createHand(
+                    snapshot.hands[
+                        Seat.North
+                    ]
+                ),
+
+            [Seat.East]:
+                this.createHand(
+                    snapshot.hands[
+                        Seat.East
+                    ]
+                ),
+
+            [Seat.South]:
+                this.createHand(
+                    snapshot.hands[
+                        Seat.South
+                    ]
+                ),
+
+            [Seat.West]:
+                this.createHand(
+                    snapshot.hands[
+                        Seat.West
+                    ]
+                )
+        };
+
+        this.currentSeat =
+            snapshot.currentSeat;
+
+        this.table.nsTricks =
+            snapshot.nsTricks;
+
+        this.table.ewTricks =
+            snapshot.ewTricks;
+
+        this.table
+            .currentTrick
+            .clear();
+
+        for (
+            const played of
+            snapshot.currentTrick
+        ) {
+            this.table
+                .currentTrick
+                .addCard({
+                    seat:
+                        played.seat,
+
+                    card:
+                        this.cloneCard(
+                            played.card
+                        )
+                });
+        }
+
+        this.openingLeadMade =
+            snapshot.openingLeadMade;
+
+        this.lastCompletedTrick =
+            this.cloneTrick(
+                snapshot
+                    .lastCompletedTrick
+            );
+
+        this.history.clear();
+
+        this.history.tricks.push(
+            ...this.cloneHistory(
+                snapshot.history
+            )
+        );
+    }
+
+    private createHand(
+        cards: Card[]
+    ): Hand {
+        const hand =
+            new Hand();
+
+        for (
+            const card of cards
+        ) {
+            hand.add(
+                this.cloneCard(card)
+            );
+        }
+
+        hand.sort();
+
+        return hand;
+    }
+
+    private cloneCard(
+        card: Card
+    ): Card {
+        return new Card(
+            card.suit,
+            card.rank
+        );
+    }
+
+    private cloneCards(
+        cards: Card[]
+    ): Card[] {
+        return cards.map(
+            card =>
+                this.cloneCard(card)
+        );
+    }
+
+    private cloneTrick(
+        trick: Trick | null
+    ): Trick | null {
+        if (!trick) {
+            return null;
+        }
+
+        const copy =
+            new Trick();
+
+        for (
+            const played of
+            trick.cards
+        ) {
+            copy.addCard({
+                seat:
+                    played.seat,
+
+                card:
+                    this.cloneCard(
+                        played.card
+                    )
+            });
+        }
+
+        return copy;
+    }
+
+    private cloneHistory(
+        tricks:
+            readonly TrickRecord[]
+    ): TrickRecord[] {
+        return tricks.map(
+            trick => {
+                const copy =
+                    new TrickRecord();
+
+                for (
+                    const play of
+                    trick.plays
+                ) {
+                    copy.addPlay(
+                        new PlayRecord(
+                            play.seat,
+                            this.cloneCard(
+                                play.card
+                            )
+                        )
+                    );
+                }
+
+                copy.winner =
+                    trick.winner;
+
+                return copy;
+            }
+        );
     }
 }
