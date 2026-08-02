@@ -2,8 +2,11 @@ import { Auction } from "./Auction";
 import { Bid } from "./Bid";
 import { Suit } from "../cards/Card";
 
-const auction =
-    new Auction();
+import { Seat } from "../core/Seat";
+
+const auction = new Auction(
+    Seat.North
+);
 
 
 auction.addBid(

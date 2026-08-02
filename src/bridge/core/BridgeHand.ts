@@ -55,7 +55,9 @@ export class BridgeHand {
 
 
         this.auction =
-            new Auction();
+            new Auction(
+    	    Seat.North
+	    );
 
 
         this.phase =
