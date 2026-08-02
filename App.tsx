@@ -4,13 +4,13 @@ import {
     SafeAreaProvider
 } from "react-native-safe-area-context";
 
-import AuctionScreen
-from "./src/bridge/ui/AuctionScreen";
+import BridgeSessionScreen
+from "./src/bridge/ui/BridgeSessionScreen";
 
 export default function App() {
     return (
         <SafeAreaProvider>
-            <AuctionScreen />
+            <BridgeSessionScreen />
         </SafeAreaProvider>
     );
 }

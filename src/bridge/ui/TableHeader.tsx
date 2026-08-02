@@ -7,13 +7,19 @@ import {
     View
 } from "react-native";
 
+import { Contract } from "../play/Contract";
+import { Suit } from "../cards/Card";
+import { suitSymbol } from "../cards/SuitDisplay";
+
 interface Props {
+    contract: Contract;
     nsTricks: number;
     ewTricks: number;
     onNewHand: () => void;
 }
 
 export default function TableHeader({
+    contract,
     nsTricks,
     ewTricks,
     onNewHand
@@ -25,9 +31,10 @@ export default function TableHeader({
                     BridgeAI
                 </Text>
 
-                <Text style={styles.contract}>
-                    Contract: 4♠ by South
-                </Text>
+<Text style={styles.contract}>
+    Contract: {formatContract(contract)}
+</Text>
+
             </View>
 
             <View style={styles.rightHeader}>
@@ -59,6 +66,24 @@ export default function TableHeader({
         </View>
     );
 }
+
+function formatContract(
+    contract: Contract
+): string {
+    const trump =
+        contract.trump === "NT"
+            ? "NT"
+            : suitSymbol(
+                contract.trump as Suit
+            );
+
+    return (
+        `${contract.level}${trump}` +
+        ` by ${contract.declarer}`
+    );
+}
+
+
 
 const styles = StyleSheet.create({
     headerRow: {

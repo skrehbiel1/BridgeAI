@@ -14,6 +14,12 @@ import BridgeTable from "./BridgeTable";
 const COMPUTER_PLAY_DELAY_MS = 650;
 const COMPLETED_TRICK_DELAY_MS = 1000;
 
+interface Props {
+    initialGame?: Game;
+    onNewBoard?: () => void;
+}
+
+
 function createGame(): Game {
     return new Game(
         new Contract(
@@ -25,7 +31,10 @@ function createGame(): Game {
     );
 }
 
-export default function BridgeScreen() {
+export default function BridgeScreen({
+    initialGame,
+    onNewBoard
+}: Props) {
     const [
         renderVersion,
         redraw
@@ -46,12 +55,14 @@ const [
 ] = useState(false);
 
 
-    const [
-        game,
-        setGame
-    ] = useState<Game>(
-        createGame
-    );
+ const [
+    game,
+    setGame
+] = useState<Game>(
+    () =>
+        initialGame ??
+        createGame()
+);
 
     const [
         showCompletedTrick,
@@ -228,9 +239,14 @@ function startNewHand(): void {
     setShowCompletedTrick(false);
     setCollectingCompletedTrick(false);
     setHistoryVisible(false);
+
+    if (onNewBoard) {
+        onNewBoard();
+        return;
+    }
+
     setGame(createGame());
 }
-
     const displayedTrick =
         showCompletedTrick &&
         game.lastCompletedTrick

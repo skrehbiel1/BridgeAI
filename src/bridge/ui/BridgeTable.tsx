@@ -90,15 +90,12 @@ export default function BridgeTable({
             ]}
         >
             <View style={styles.container}>
-                <TableHeader
-                    nsTricks={
-                        game.table.nsTricks
-                    }
-                    ewTricks={
-                        game.table.ewTricks
-                    }
-                    onNewHand={onNewHand}
-                />
+<TableHeader
+    contract={game.contract}
+    nsTricks={game.table.nsTricks}
+    ewTricks={game.table.ewTricks}
+    onNewHand={onNewHand}
+/>
 <Pressable
     onPress={onShowHistory}
     style={styles.historyButton}

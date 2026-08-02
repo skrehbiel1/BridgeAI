@@ -91,11 +91,13 @@ export class Game {
         GameSnapshot[] = [];
 
     constructor(
-        public contract: Contract,
-        openingLeader: Seat
-    ) {
-        this.hands =
-            Deal.create();
+    public contract: Contract,
+    openingLeader: Seat,
+    initialHands?: DealResult
+) {
+    this.hands =
+        initialHands ??
+        Deal.create();
 
         this.table =
             new Table();
