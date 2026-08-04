@@ -133,7 +133,7 @@ export default function BiddingBox({
 
                         {BID_SUITS.map(suit => {
                             const bid =
-                                new Bid(
+                                Bid.Contract(
                                     level,
                                     suit
                                 );
@@ -226,16 +226,33 @@ function formatBidLabel(
         return "Pass";
     }
 
+    if (bid.isDouble()) {
+        return "Double";
+    }
+
+    if (bid.isRedouble()) {
+        return "Redouble";
+    }
+
+    if (
+        !bid.isContract() ||
+        bid.level === undefined ||
+        bid.suit === undefined
+    ) {
+        return "Invalid bid";
+    }
+
     if (bid.suit === "NT") {
         return `${bid.level} notrump`;
     }
 
     return (
         `${bid.level} ` +
-        suitName(bid.suit)
+        suitName(
+            bid.suit
+        )
     );
 }
-
 function suitName(
     suit: Suit
 ): string {

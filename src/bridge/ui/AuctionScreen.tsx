@@ -283,7 +283,7 @@ export default function AuctionScreen() {
                     <Text style={styles.contractPreview}>
                         Final contract:{" "}
                         {formatBid(
-                            new Bid(
+                            Bid.Contract(
                                 finalContract.level,
                                 finalContract.trump
                             )
@@ -392,7 +392,7 @@ function AuctionResult({
                 <>
                     <Text style={styles.finalContract}>
                         {formatBid(
-                            new Bid(
+                            Bid.Contract(
                                 contract.level,
                                 contract.trump
                             )
@@ -428,12 +428,29 @@ function formatBid(
         return "Pass";
     }
 
+    if (bid.isDouble()) {
+        return "X";
+    }
+
+    if (bid.isRedouble()) {
+        return "XX";
+    }
+
+    if (
+        !bid.isContract() ||
+        bid.level === undefined ||
+        bid.suit === undefined
+    ) {
+        return "";
+    }
+
     return (
         `${bid.level}` +
-        displaySuit(bid.suit)
+        displaySuit(
+            bid.suit
+        )
     );
 }
-
 function displaySuit(
     suit: BidSuit
 ): string {

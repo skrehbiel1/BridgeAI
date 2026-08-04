@@ -10,7 +10,7 @@ const auction = new Auction(
 
 
 auction.addBid(
-    new Bid(1,Suit.Spades)
+    Bid.Contract(1,Suit.Spades)
 );
 
 

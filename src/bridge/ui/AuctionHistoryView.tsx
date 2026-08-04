@@ -231,6 +231,22 @@ function formatBid(
         return "Pass";
     }
 
+    if (bid.isDouble()) {
+        return "X";
+    }
+
+    if (bid.isRedouble()) {
+        return "XX";
+    }
+
+    if (
+        !bid.isContract() ||
+        bid.level === undefined ||
+        bid.suit === undefined
+    ) {
+        return "";
+    }
+
     return (
         `${bid.level}` +
         displaySuit(

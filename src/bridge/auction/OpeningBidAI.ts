@@ -49,7 +49,7 @@ const lengths =
 
 if(lengths.S >=5){
 
-    return new Bid(
+    return Bid.Contract(
         1,
         Suit.Spades
     );
@@ -60,7 +60,7 @@ if(lengths.S >=5){
 
 if(lengths.H >=5){
 
-    return new Bid(
+    return Bid.Contract(
         1,
         Suit.Hearts
     );
@@ -71,7 +71,7 @@ if(lengths.H >=5){
 
 if(lengths.D >= lengths.C){
 
-    return new Bid(
+    return Bid.Contract(
         1,
         Suit.Diamonds
     );
@@ -79,7 +79,7 @@ if(lengths.D >= lengths.C){
 }
 
 
-return new Bid(
+return Bid.Contract(
     1,
     Suit.Clubs
 );

@@ -103,44 +103,23 @@ export class BridgeHand {
 
 
 
-    private createContract(){
+private createContract(): void {
+    const contract =
+        this.auction.finalContract();
 
-
-        const finalBid =
-            this.auction
-                .lastContract();
-
-
-
-        if(!finalBid){
-
-            this.phase =
-                GamePhase.COMPLETE;
-
-            return;
-
-        }
-
-
-
-        this.contract =
-            new Contract(
-
-                finalBid.level,
-
-                finalBid.suit,
-
-                Seat.South
-
-            );
-
-
+    if (!contract) {
         this.phase =
-            GamePhase.PLAY;
+            GamePhase.COMPLETE;
 
-
+        return;
     }
 
+    this.contract =
+        contract;
+
+    this.phase =
+        GamePhase.PLAY;
+}
 
 
 }

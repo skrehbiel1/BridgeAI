@@ -1,58 +1,96 @@
 import { Suit } from "../cards/Card";
 
-
 export type BidSuit =
     | Suit
     | "NT";
 
+export enum CallType {
+    Contract = "Contract",
+    Pass = "Pass",
+    Double = "Double",
+    Redouble = "Redouble"
+}
 
 export class Bid {
-
-
     constructor(
+        public type: CallType,
+        public level?: number,
+        public suit?: BidSuit
+    ) {}
 
-        public level:number,
-
-        public suit:BidSuit,
-
-        public pass:boolean=false
-
-    ){}
-
-
-
-    static Pass(){
-
+    static Contract(
+        level: number,
+        suit: BidSuit
+    ): Bid {
         return new Bid(
-            0,
-            "NT",
-            true
+            CallType.Contract,
+            level,
+            suit
         );
-
     }
 
-
-
-    isPass(){
-
-        return this.pass;
-
+    static Pass(): Bid {
+        return new Bid(
+            CallType.Pass
+        );
     }
 
+    static Double(): Bid {
+        return new Bid(
+            CallType.Double
+        );
+    }
 
+    static Redouble(): Bid {
+        return new Bid(
+            CallType.Redouble
+        );
+    }
 
-    toString(){
+    isContract(): boolean {
+        return (
+            this.type ===
+            CallType.Contract
+        );
+    }
 
-        if(this.pass){
+    isPass(): boolean {
+        return (
+            this.type ===
+            CallType.Pass
+        );
+    }
 
-            return "Pass";
+    isDouble(): boolean {
+        return (
+            this.type ===
+            CallType.Double
+        );
+    }
 
+    isRedouble(): boolean {
+        return (
+            this.type ===
+            CallType.Redouble
+        );
+    }
+
+    toString(): string {
+        switch (this.type) {
+            case CallType.Pass:
+                return "Pass";
+
+            case CallType.Double:
+                return "X";
+
+            case CallType.Redouble:
+                return "XX";
+
+            case CallType.Contract:
+                return (
+                    `${this.level}` +
+                    `${this.suit}`
+                );
         }
-
-
-        return `${this.level}${this.suit}`;
-
     }
-
-
 }

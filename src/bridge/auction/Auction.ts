@@ -10,7 +10,8 @@ import {
 } from "../core/Partnership";
 
 import {
-    Contract
+    Contract,
+    ContractMultiplier
 } from "../play/Contract";
 
 import {
@@ -81,34 +82,53 @@ constructor(
         return true;
     }
 
-    isLegalBid(
-        bid: Bid
-    ): boolean {
-        if (bid.isPass()) {
-            return true;
-        }
-
-        if (
-            bid.level < 1 ||
-            bid.level > 7
-        ) {
-            return false;
-        }
-
-        const previousContract =
-            this.lastContract();
-
-        if (!previousContract) {
-            return true;
-        }
-
-        return (
-            this.bidValue(bid) >
-            this.bidValue(
-                previousContract
-            )
-        );
+isLegalBid(
+    bid: Bid
+): boolean {
+    if (bid.isPass()) {
+        return true;
     }
+
+    if (bid.isDouble()) {
+        return this.canDouble();
+    }
+
+    if (bid.isRedouble()) {
+        return this.canRedouble();
+    }
+
+    if (
+        !bid.isContract() ||
+        bid.level === undefined ||
+        bid.suit === undefined
+    ) {
+        return false;
+    }
+
+    const level =
+        bid.level;
+
+    if (
+        level < 1 ||
+        level > 7
+    ) {
+        return false;
+    }
+
+    const previousContract =
+        this.lastContract();
+
+    if (!previousContract) {
+        return true;
+    }
+
+    return (
+        this.bidValue(bid) >
+        this.bidValue(
+            previousContract
+        )
+    );
+}
 
     legalContractBids(): Bid[] {
         const bids: Bid[] = [];
@@ -128,10 +148,10 @@ constructor(
         ) {
             for (const suit of suits) {
                 const bid =
-                    new Bid(
-                        level,
-                        suit
-                    );
+                  Bid.Contract(
+    level,
+    suit
+);
 
                 if (
                     this.isLegalBid(bid)
@@ -234,12 +254,151 @@ constructor(
                 finalCall
             );
 
-        return new Contract(
-            finalCall.bid.level,
-            finalCall.bid.suit,
-            declarer
+if (
+    finalCall.bid.level === undefined ||
+    finalCall.bid.suit === undefined
+) {
+    return undefined;
+}
+
+return new Contract(
+    finalCall.bid.level,
+    finalCall.bid.suit,
+    declarer,
+    this.contractMultiplier()
+);    }
+
+
+canDouble(): boolean {
+    const contractCall =
+        this.lastContractCall();
+
+    if (!contractCall) {
+        return false;
+    }
+
+    const lastNonPass =
+        this.lastNonPassCall();
+
+    if (
+        !lastNonPass ||
+        !lastNonPass.bid.isContract()
+    ) {
+        return false;
+    }
+
+    return (
+        partnershipOf(
+            contractCall.seat
+        ) !==
+        partnershipOf(
+            this.currentSeat
+        )
+    );
+}
+
+canRedouble(): boolean {
+    const contractCall =
+        this.lastContractCall();
+
+    const lastNonPass =
+        this.lastNonPassCall();
+
+    if (
+        !contractCall ||
+        !lastNonPass ||
+        !lastNonPass.bid.isDouble()
+    ) {
+        return false;
+    }
+
+    return (
+        partnershipOf(
+            contractCall.seat
+        ) ===
+        partnershipOf(
+            this.currentSeat
+        )
+    );
+}
+
+private lastNonPassCall():
+    AuctionCall | undefined {
+    for (
+        let index =
+            this.calls.length - 1;
+        index >= 0;
+        index--
+    ) {
+        const call =
+            this.calls[index];
+
+        if (!call.bid.isPass()) {
+            return call;
+        }
+    }
+
+    return undefined;
+}
+
+private contractMultiplier():
+    ContractMultiplier {
+    let contractIndex = -1;
+
+    for (
+        let index =
+            this.calls.length - 1;
+        index >= 0;
+        index--
+    ) {
+        if (
+            this.calls[index]
+                .bid
+                .isContract()
+        ) {
+            contractIndex = index;
+            break;
+        }
+    }
+
+    if (contractIndex < 0) {
+        return (
+            ContractMultiplier.Undoubled
         );
     }
+
+    const callsAfterContract =
+        this.calls.slice(
+            contractIndex + 1
+        );
+
+    if (
+        callsAfterContract.some(
+            call =>
+                call.bid.isRedouble()
+        )
+    ) {
+        return (
+            ContractMultiplier.Redoubled
+        );
+    }
+
+    if (
+        callsAfterContract.some(
+            call =>
+                call.bid.isDouble()
+        )
+    ) {
+        return (
+            ContractMultiplier.Doubled
+        );
+    }
+
+    return (
+        ContractMultiplier.Undoubled
+    );
+}
+
 
     private determineDeclarer(
         finalCall: AuctionCall
@@ -270,14 +429,27 @@ constructor(
         );
     }
 
-    private bidValue(
-        bid: Bid
-    ): number {
-        return (
-            bid.level * 5 +
-            BID_SUIT_ORDER[
-                bid.suit
-            ]
-        );
+private bidValue(
+    bid: Bid
+): number {
+    if (
+        !bid.isContract() ||
+        bid.level === undefined ||
+        bid.suit === undefined
+    ) {
+        return -1;
     }
+
+    const level =
+        bid.level;
+
+    const suit =
+        bid.suit;
+
+    return (
+        level * 5 +
+        BID_SUIT_ORDER[suit]
+    );
+}
+
 }

@@ -43,30 +43,35 @@ implements BidStrategy {
         const preferredSuit =
             this.longestSuit(hand);
 
-        const legalSuitBid =
-            auction
-                .legalContractBids()
-                .find(
-                    bid =>
-                        bid.suit ===
-                            preferredSuit &&
-                        bid.level <= 3
-                );
+const legalSuitBid =
+    auction
+        .legalContractBids()
+        .find(
+            bid =>
+                bid.isContract() &&
+                bid.level !== undefined &&
+                bid.suit ===
+                    preferredSuit &&
+                bid.level <= 3
+        );
+
 
         if (legalSuitBid) {
             return legalSuitBid;
         }
 
         if (this.isBalanced(hand)) {
-            const legalNotrumpBid =
-                auction
-                    .legalContractBids()
-                    .find(
-                        bid =>
-                            bid.suit ===
-                                "NT" &&
-                            bid.level <= 3
-                    );
+const legalNotrumpBid =
+    auction
+        .legalContractBids()
+        .find(
+            bid =>
+                bid.isContract() &&
+                bid.level !== undefined &&
+                bid.suit ===
+                    "NT" &&
+                bid.level <= 3
+        );
 
             if (legalNotrumpBid) {
                 return legalNotrumpBid;
@@ -89,13 +94,13 @@ implements BidStrategy {
             highCardPoints <= 17 &&
             this.isBalanced(hand)
         ) {
-            return new Bid(
+            return Bid.Contract(
                 1,
                 "NT"
             );
         }
 
-        return new Bid(
+        return Bid.Contract(
             1,
             this.longestSuit(hand)
         );
