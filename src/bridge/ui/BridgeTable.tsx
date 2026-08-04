@@ -19,8 +19,6 @@ import SouthHandView from "./SouthHandView";
 import TablePlayArea from "./TablePlayArea";
 import NorthArea from "./NorthArea";
 
-import HandView from "./HandView";
-import TableCenter from "./TableCenter";
 import TableHeader from "./TableHeader";
 
 import EndOfHandSummary from "./EndOfHandSummary";
@@ -79,6 +77,37 @@ export default function BridgeTable({
         game.table.currentTrick
             .leadSuit;
 
+const northIsDummy =
+    game.isDummy(
+        Seat.North
+    );
+
+const southIsDummy =
+    game.isDummy(
+        Seat.South
+    );
+
+const northIsHuman =
+    game.isHumanControlled(
+        Seat.North
+    );
+
+/*
+ * Show North when:
+ *
+ * - North is controlled by the human, or
+ * - North is dummy and the opening lead
+ *   has already been made.
+ */
+const showNorthHand =
+    northIsHuman ||
+    (
+        northIsDummy &&
+        dummyVisible
+    );
+
+
+
     return (
         <SafeAreaView
             style={styles.safeArea}
@@ -96,14 +125,7 @@ export default function BridgeTable({
     ewTricks={game.table.ewTricks}
     onNewHand={onNewHand}
 />
-<Pressable
-    onPress={onShowHistory}
-    style={styles.historyButton}
->
-    <Text style={styles.historyButtonText}>
-        History
-    </Text>
-</Pressable>
+
 <TrickHistoryView
     game={game}
     visible={historyVisible}
@@ -155,14 +177,18 @@ export default function BridgeTable({
 
 <NorthArea
     hand={northHand}
-    dummyVisible={dummyVisible}
+    showHand={showNorthHand}
+    isDummy={northIsDummy}
     leadSuit={activeLeadSuit}
     enabled={northCanPlay}
     active={
         !showCompletedTrick &&
-        game.currentSeat === Seat.North
+        game.currentSeat ===
+            Seat.North
     }
-    onCardPlayed={onPlayHumanCard}
+    onCardPlayed={
+        onPlayHumanCard
+    }
 />
 
 <TablePlayArea
@@ -186,6 +212,11 @@ export default function BridgeTable({
     highlightStatus={
         southCanPlay ||
         northCanPlay
+    }
+    title="South — You"
+    isDummy={
+        southIsDummy &&
+        dummyVisible
     }
     onCardPlayed={
         index =>
@@ -213,20 +244,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: "#145A32"
     },
-historyButton: {
-    alignSelf: "center",
-    marginTop: 6,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 8
-},
 
-historyButtonText: {
-    color: "#173A26",
-    fontSize: 14,
-    fontWeight: "800"
-},
     container: {
         flex: 1,
 	position: "relative",

@@ -17,6 +17,10 @@ interface Props {
     enabled: boolean;
     statusMessage: string;
     highlightStatus: boolean;
+
+    title?: string;
+    isDummy?: boolean;
+
     onCardPlayed: (
         index: number
     ) => void;
@@ -28,14 +32,17 @@ export default function SouthHandView({
     enabled,
     statusMessage,
     highlightStatus,
+    title = "South — You",
+    isDummy = false,
     onCardPlayed
 }: Props) {
     return (
         <View style={styles.container}>
             <View style={styles.heading}>
                 <Text style={styles.title}>
-                    South — You
-                </Text>
+    			{title}
+    			{isDummy ? " — Dummy" : ""}
+		</Text>
 
                 <Text style={styles.cardCount}>
                     {hand.cards.length}{" "}

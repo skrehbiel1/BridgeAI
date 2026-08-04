@@ -5,6 +5,7 @@ import React, {
 } from "react";
 
 import {
+    ScrollView,
     StyleSheet,
     Text,
     View
@@ -18,20 +19,20 @@ import { Auction } from "../auction/Auction";
 import { Bid } from "../auction/Bid";
 import { BiddingAI } from "../auction/BiddingAI";
 
-import AuctionHistoryView from "./AuctionHistoryView";
-
 import {
     Deal,
     DealResult
 } from "../core/Deal";
 
+import { Seat } from "../core/Seat";
+
 import {
-    Seat,
-    nextSeat
-} from "../core/Seat";
+    openingLeaderForContract
+} from "../core/ContractSeats";
 
 import { Game } from "../core/Game";
 
+import AuctionHistoryView from "./AuctionHistoryView";
 import BiddingBox from "./BiddingBox";
 import BridgeScreen from "./BridgeScreen";
 import HandView from "./HandView";
@@ -41,7 +42,8 @@ const COMPUTER_BID_DELAY_MS = 650;
 type SessionPhase =
     | "auction"
     | "play"
-    | "passedOut";
+    | "passedOut"
+    | "unsupportedContract";
 
 interface SessionState {
     hands: DealResult;
@@ -53,15 +55,22 @@ interface SessionState {
 function createSession(): SessionState {
     return {
         hands: Deal.create(),
+
         auction:
             new Auction(
                 Seat.North
             ),
+
         phase: "auction"
     };
 }
 
 export default function BridgeSessionScreen() {
+    /*
+     * Auction and hand objects are mutable.
+     * Incrementing renderVersion forces React
+     * to render their updated state.
+     */
     const [
         renderVersion,
         redraw
@@ -85,6 +94,10 @@ export default function BridgeSessionScreen() {
         phase
     } = session;
 
+    /*
+     * North, East and West bid automatically.
+     * South is controlled by the user.
+     */
     useEffect(() => {
         if (
             phase !== "auction" ||
@@ -98,6 +111,7 @@ export default function BridgeSessionScreen() {
         const timer =
             setTimeout(() => {
                 if (
+                    phase !== "auction" ||
                     auction.isComplete() ||
                     auction.currentSeat ===
                         Seat.South
@@ -108,9 +122,12 @@ export default function BridgeSessionScreen() {
                 const bidder =
                     auction.currentSeat;
 
+                const hand =
+                    hands[bidder];
+
                 const bid =
                     BiddingAI.chooseBid(
-                        hands[bidder],
+                        hand,
                         auction
                     );
 
@@ -122,6 +139,7 @@ export default function BridgeSessionScreen() {
                 }
 
                 finishAuctionIfNeeded();
+
                 redraw();
             }, COMPUTER_BID_DELAY_MS);
 
@@ -155,6 +173,7 @@ export default function BridgeSessionScreen() {
         }
 
         finishAuctionIfNeeded();
+
         redraw();
     }
 
@@ -181,14 +200,42 @@ export default function BridgeSessionScreen() {
         }
 
         /*
-         * Opening lead is made by the player
+         * The current play UI assumes the human
+         * controls the North-South partnership.
+         *
+         * East-West declarer play will be added
+         * after the play screen becomes fully
+         * contract-aware.
+         */
+        const humanSideWonContract =
+            contract.declarer ===
+                Seat.North ||
+            contract.declarer ===
+                Seat.South;
+
+        if (!humanSideWonContract) {
+            setSession(current => ({
+                ...current,
+                phase:
+                    "unsupportedContract"
+            }));
+
+            return;
+        }
+
+        /*
+         * The opening lead is made by the player
          * immediately to declarer's left.
          */
         const openingLeader =
-            nextSeat(
-                contract.declarer
+            openingLeaderForContract(
+                contract
             );
 
+        /*
+         * Use the same four hands that were shown
+         * and evaluated during the auction.
+         */
         const preparedGame =
             new Game(
                 contract,
@@ -209,32 +256,145 @@ export default function BridgeSessionScreen() {
         );
     }
 
+    /*
+     * Play phase.
+     */
     if (
         phase === "play" &&
         game
     ) {
         return (
             <BridgeScreen
-                key={game.contract.toString()}
+                key={
+                    game.contract.toString()
+                }
                 initialGame={game}
-                onNewBoard={startNewBoard}
+                onNewBoard={
+                    startNewBoard
+                }
             />
         );
     }
 
+    /*
+     * Passed-out board.
+     */
     if (phase === "passedOut") {
         return (
             <SafeAreaView
                 style={styles.safeArea}
+                edges={[
+                    "top",
+                    "right",
+                    "bottom",
+                    "left"
+                ]}
             >
-                <View style={styles.resultPanel}>
-                    <Text style={styles.resultTitle}>
+                <View
+                    style={
+                        styles.resultPanel
+                    }
+                >
+                    <Text
+                        style={
+                            styles.resultTitle
+                        }
+                    >
                         Passed Out
                     </Text>
 
                     <Text
-                        onPress={startNewBoard}
-                        style={styles.newBoardButton}
+                        style={
+                            styles.resultMessage
+                        }
+                    >
+                        All four players passed.
+                    </Text>
+
+                    <Text
+                        accessibilityRole="button"
+                        onPress={
+                            startNewBoard
+                        }
+                        style={
+                            styles.newBoardButton
+                        }
+                    >
+                        New Board
+                    </Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    /*
+     * Temporary result when East-West wins the
+     * auction. Defender play will be added later.
+     */
+    if (
+        phase ===
+        "unsupportedContract"
+    ) {
+        const contract =
+            auction.finalContract();
+
+        return (
+            <SafeAreaView
+                style={styles.safeArea}
+                edges={[
+                    "top",
+                    "right",
+                    "bottom",
+                    "left"
+                ]}
+            >
+                <View
+                    style={
+                        styles.resultPanel
+                    }
+                >
+                    <Text
+                        style={
+                            styles.resultTitle
+                        }
+                    >
+                        East–West Won the Auction
+                    </Text>
+
+                    {contract && (
+                        <Text
+                            style={
+                                styles.resultSubtitle
+                            }
+                        >
+                            Contract:{" "}
+                            {
+                                contract.toString()
+                            }{" "}
+                            by{" "}
+                            {
+                                contract.declarer
+                            }
+                        </Text>
+                    )}
+
+                    <Text
+                        style={
+                            styles.resultMessage
+                        }
+                    >
+                        Defender play will be
+                        added next.
+                    </Text>
+
+                    <Text
+                        accessibilityRole="button"
+                        onPress={
+                            startNewBoard
+                        }
+                        style={
+                            styles.newBoardButton
+                        }
                     >
                         New Board
                     </Text>
@@ -244,9 +404,10 @@ export default function BridgeSessionScreen() {
     }
 
     const southMayBid =
+        phase === "auction" &&
+        !auction.isComplete() &&
         auction.currentSeat ===
-            Seat.South &&
-        !auction.isComplete();
+            Seat.South;
 
     return (
         <SafeAreaView
@@ -258,22 +419,57 @@ export default function BridgeSessionScreen() {
                 "left"
             ]}
         >
-            <View style={styles.container}>
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={
+                    styles.container
+                }
+                showsVerticalScrollIndicator={
+                    false
+                }
+                keyboardShouldPersistTaps={
+                    "handled"
+                }
+            >
                 <Text style={styles.title}>
                     BridgeAI
                 </Text>
 
                 <Text style={styles.subtitle}>
-                    Dealer: {auction.dealer}
+                    Dealer: {auction.dealer} — OTA TEST
                 </Text>
 
-<AuctionHistoryView
-    auction={auction}
-/>
+                <AuctionHistoryView
+                    auction={auction}
+                />
+
                 <View style={styles.handArea}>
-                    <Text style={styles.handTitle}>
-                        South — You
-                    </Text>
+                    <View
+                        style={
+                            styles.handHeading
+                        }
+                    >
+                        <Text
+                            style={
+                                styles.handTitle
+                            }
+                        >
+                            South — You
+                        </Text>
+
+                        <Text
+                            style={
+                                styles.handCount
+                            }
+                        >
+                            {
+                                hands[
+                                    Seat.South
+                                ].cards.length
+                            }{" "}
+                            cards
+                        </Text>
+                    </View>
 
                     <HandView
                         hand={
@@ -302,9 +498,11 @@ export default function BridgeSessionScreen() {
                     disabled={
                         !southMayBid
                     }
-                    onBid={makeSouthBid}
+                    onBid={
+                        makeSouthBid
+                    }
                 />
-            </View>
+            </ScrollView>
         </SafeAreaView>
     );
 }
@@ -315,37 +513,63 @@ const styles = StyleSheet.create({
         backgroundColor: "#145A32"
     },
 
-    container: {
+    scrollView: {
         flex: 1,
+        backgroundColor: "#1B7040"
+    },
+
+    container: {
+        flexGrow: 1,
         backgroundColor: "#1B7040",
         paddingHorizontal: 10,
-        paddingVertical: 8
+        paddingTop: 8,
+        paddingBottom: 28
     },
 
     title: {
         color: "#FFFFFF",
         fontSize: 27,
-        fontWeight: "800"
+        fontWeight: "800",
+        includeFontPadding: false
     },
 
     subtitle: {
         color: "#E8F5E9",
         fontSize: 15,
-        marginBottom: 8
+        fontWeight: "600",
+        marginTop: 2,
+        marginBottom: 8,
+        includeFontPadding: false
     },
 
     handArea: {
+        width: "100%",
         alignItems: "center",
         marginVertical: 8
     },
 
-    handTitle: {
+    handHeading: {
         width: "100%",
         maxWidth: 350,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent:
+            "space-between",
+        paddingHorizontal: 4,
+        marginBottom: 3
+    },
+
+    handTitle: {
         color: "#FFFFFF",
         fontSize: 17,
         fontWeight: "800",
-        marginBottom: 3
+        includeFontPadding: false
+    },
+
+    handCount: {
+        color: "#E8F5E9",
+        fontSize: 13,
+        includeFontPadding: false
     },
 
     turnText: {
@@ -353,7 +577,8 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: "700",
         textAlign: "center",
-        marginBottom: 7
+        marginBottom: 7,
+        includeFontPadding: false
     },
 
     yourTurnText: {
@@ -364,22 +589,45 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "#1B7040"
+        backgroundColor: "#1B7040",
+        paddingHorizontal: 24
     },
 
     resultTitle: {
         color: "#FFFFFF",
         fontSize: 30,
-        fontWeight: "800"
+        fontWeight: "800",
+        textAlign: "center",
+        includeFontPadding: false
     },
 
+    resultSubtitle: {
+        color: "#FFFFFF",
+        fontSize: 19,
+        fontWeight: "700",
+        textAlign: "center",
+        marginTop: 12,
+        includeFontPadding: false
+    },
+
+    resultMessage: {
+        color: "#E8F5E9",
+        fontSize: 15,
+        textAlign: "center",
+        marginTop: 10,
+        includeFontPadding: false
+    },
 
     newBoardButton: {
+        minWidth: 170,
         backgroundColor: "#FFEB3B",
+        borderWidth: 2,
+        borderColor: "#F9A825",
         borderRadius: 10,
         color: "#1B1B1B",
         fontSize: 17,
         fontWeight: "800",
+        textAlign: "center",
         paddingHorizontal: 24,
         paddingVertical: 12,
         marginTop: 20,

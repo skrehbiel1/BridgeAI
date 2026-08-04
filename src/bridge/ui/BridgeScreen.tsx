@@ -187,9 +187,10 @@ useEffect(() => {
                 card
             );
 
-        if (!played) {
-            return;
-        }
+	if (!played) {
+    		game.discardLatestUndoPoint();
+    		return;
+	}
 
         const completed =
             game.table.totalTricks() >
@@ -253,19 +254,32 @@ function startNewHand(): void {
             ? game.lastCompletedTrick
             : game.table.currentTrick;
 
-    const dummyVisible =
-        game.openingLeadMade;
+const dummyVisible =
+    game.openingLeadMade;
 
-    const southCanPlay =
-        !showCompletedTrick &&
-        !game.isFinished() &&
-        game.currentSeat === Seat.South;
+const northIsHuman =
+    game.isHumanControlled(
+        Seat.North
+    );
 
-    const northCanPlay =
-        dummyVisible &&
-        !showCompletedTrick &&
-        !game.isFinished() &&
-        game.currentSeat === Seat.North;
+const southIsHuman =
+    game.isHumanControlled(
+        Seat.South
+    );
+
+const northCanPlay =
+    northIsHuman &&
+    !showCompletedTrick &&
+    !game.isFinished() &&
+    game.currentSeat ===
+        Seat.North;
+
+const southCanPlay =
+    southIsHuman &&
+    !showCompletedTrick &&
+    !game.isFinished() &&
+    game.currentSeat ===
+        Seat.South;
 
     const statusMessage =
         getStatusMessage(
@@ -334,13 +348,20 @@ function getStatusMessage(
         );
     }
 
-    if (southCanPlay) {
-        return "Your turn — play from South";
-    }
+if (southCanPlay) {
+    return game.isDummy(
+        Seat.South
+    )
+        ? "Your turn — play from dummy"
+        : "Your turn — play from South";
+}
 
-    if (northCanPlay) {
-        return "Your turn — play from dummy";
-    }
-
+if (northCanPlay) {
+    return game.isDummy(
+        Seat.North
+    )
+        ? "Your turn — play from dummy"
+        : "Your turn — play from North";
+}
     return `${game.currentSeat} is playing`;
 }

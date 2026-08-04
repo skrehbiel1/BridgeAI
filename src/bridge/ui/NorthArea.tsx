@@ -10,11 +10,15 @@ import { Suit } from "../cards/Card";
 import { Seat } from "../core/Seat";
 
 import DummyHandView from "./DummyHandView";
+import HandView from "./HandView";
 import SeatView from "./SeatView";
 
 interface Props {
     hand: Hand;
-    dummyVisible: boolean;
+
+    showHand: boolean;
+    isDummy: boolean;
+
     leadSuit?: Suit;
     enabled: boolean;
     active: boolean;
@@ -27,7 +31,8 @@ interface Props {
 
 export default function NorthArea({
     hand,
-    dummyVisible,
+    showHand,
+    isDummy,
     leadSuit,
     enabled,
     active,
@@ -35,19 +40,34 @@ export default function NorthArea({
 }: Props) {
     return (
         <View style={styles.container}>
-            {dummyVisible ? (
-                <DummyHandView
-                    hand={hand}
-                    leadSuit={leadSuit}
-                    enabled={enabled}
-                    onCardPlayed={
-                        index =>
-                            onCardPlayed(
-                                Seat.North,
-                                index
-                            )
-                    }
-                />
+            {showHand ? (
+                isDummy ? (
+                    <DummyHandView
+                        hand={hand}
+                        leadSuit={leadSuit}
+                        enabled={enabled}
+                        onCardPlayed={
+                            index =>
+                                onCardPlayed(
+                                    Seat.North,
+                                    index
+                                )
+                        }
+                    />
+                ) : (
+                    <HandView
+                        hand={hand}
+                        leadSuit={leadSuit}
+                        enabled={enabled}
+                        onCardPlayed={
+                            index =>
+                                onCardPlayed(
+                                    Seat.North,
+                                    index
+                                )
+                        }
+                    />
+                )
             ) : (
                 <SeatView
                     name="North"
