@@ -1,4 +1,4 @@
-	import React from "react";
+import React from "react";
 
 import {
     Pressable,
@@ -60,40 +60,116 @@ export default function BiddingBox({
         onBid(bid);
     }
 
+    const canPass =
+        !disabled;
+
+    const canDouble =
+        !disabled &&
+        auction.canDouble();
+
+    const canRedouble =
+        !disabled &&
+        auction.canRedouble();
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>
                 Your Bid
             </Text>
 
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Pass"
-                disabled={disabled}
-                onPress={() =>
-                    submitBid(
-                        Bid.Pass()
-                    )
-                }
-                style={({ pressed }) => [
-                    styles.passButton,
-                    disabled &&
-                        styles.disabledPassButton,
-                    pressed &&
-                        !disabled &&
-                        styles.pressedButton
-                ]}
-            >
-                <Text
-                    style={[
-                        styles.passText,
-                        disabled &&
-                            styles.disabledPassText
+            <View style={styles.callButtonRow}>
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Pass"
+                    disabled={!canPass}
+                    onPress={() =>
+                        submitBid(
+                            Bid.Pass()
+                        )
+                    }
+                    style={({ pressed }) => [
+                        styles.callButton,
+                        styles.passButton,
+                        !canPass &&
+                            styles.disabledCallButton,
+                        pressed &&
+                            canPass &&
+                            styles.pressedButton
                     ]}
                 >
-                    Pass
-                </Text>
-            </Pressable>
+                    <Text
+                        style={[
+                            styles.callButtonText,
+                            !canPass &&
+                                styles.disabledCallText
+                        ]}
+                    >
+                        Pass
+                    </Text>
+                </Pressable>
+
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Double"
+                    disabled={!canDouble}
+                    onPress={() =>
+                        submitBid(
+                            Bid.Double()
+                        )
+                    }
+                    style={({ pressed }) => [
+                        styles.callButton,
+                        styles.doubleButton,
+                        !canDouble &&
+                            styles.disabledCallButton,
+                        pressed &&
+                            canDouble &&
+                            styles.pressedButton
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.callButtonText,
+                            styles.doubleButtonText,
+                            !canDouble &&
+                                styles.disabledCallText
+                        ]}
+                    >
+                        Double
+                    </Text>
+                </Pressable>
+
+                <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Redouble"
+                    disabled={!canRedouble}
+                    onPress={() =>
+                        submitBid(
+                            Bid.Redouble()
+                        )
+                    }
+                    style={({ pressed }) => [
+                        styles.callButton,
+                        styles.redoubleButton,
+                        !canRedouble &&
+                            styles.disabledCallButton,
+                        pressed &&
+                            canRedouble &&
+                            styles.pressedButton
+                    ]}
+                >
+                    <Text
+                        style={[
+                            styles.callButtonText,
+                            styles.redoubleButtonText,
+                            !canRedouble &&
+                                styles.disabledCallText
+                        ]}
+                    >
+                        Redouble
+                    </Text>
+                </Pressable>
+            </View>
 
             <View style={styles.headerRow}>
                 <View style={styles.levelSpacer} />
@@ -105,7 +181,9 @@ export default function BiddingBox({
                             styles.suitHeader,
                             {
                                 color:
-                                    suitColor(suit)
+                                    suitColor(
+                                        suit
+                                    )
                             }
                         ]}
                     >
@@ -155,7 +233,9 @@ export default function BiddingBox({
                                     }
                                     disabled={!legal}
                                     onPress={() =>
-                                        submitBid(bid)
+                                        submitBid(
+                                            bid
+                                        )
                                     }
                                     style={({
                                         pressed
@@ -253,6 +333,7 @@ function formatBidLabel(
         )
     );
 }
+
 function suitName(
     suit: Suit
 ): string {
@@ -275,7 +356,7 @@ const styles = StyleSheet.create({
     container: {
         width: "100%",
         maxWidth: 360,
-        maxHeight: 390,
+        maxHeight: 400,
         alignSelf: "center",
         backgroundColor: "#FFFFFF",
         borderRadius: 14,
@@ -303,30 +384,58 @@ const styles = StyleSheet.create({
         includeFontPadding: false
     },
 
-    passButton: {
+    callButtonRow: {
+        flexDirection: "row",
+        gap: 6,
+        marginBottom: 8
+    },
+
+    callButton: {
+        flex: 1,
         minHeight: 40,
-        marginBottom: 7,
-        borderRadius: 9,
+        borderRadius: 8,
         borderWidth: 2,
-        borderColor: "#F9A825",
-        backgroundColor: "#FFEB3B",
         alignItems: "center",
-        justifyContent: "center"
+        justifyContent: "center",
+        paddingHorizontal: 4
     },
 
-    disabledPassButton: {
-        backgroundColor: "#E0E0E0",
-        borderColor: "#C4C4C4"
+    passButton: {
+        backgroundColor: "#FFEB3B",
+        borderColor: "#F9A825"
     },
 
-    passText: {
+    doubleButton: {
+        backgroundColor: "#FFEBEE",
+        borderColor: "#C62828"
+    },
+
+    redoubleButton: {
+        backgroundColor: "#E3F2FD",
+        borderColor: "#1565C0"
+    },
+
+    callButtonText: {
         color: "#1B1B1B",
-        fontSize: 17,
+        fontSize: 14,
         fontWeight: "800",
         includeFontPadding: false
     },
 
-    disabledPassText: {
+    doubleButtonText: {
+        color: "#B71C1C"
+    },
+
+    redoubleButtonText: {
+        color: "#0D47A1"
+    },
+
+    disabledCallButton: {
+        backgroundColor: "#E0E0E0",
+        borderColor: "#C4C4C4"
+    },
+
+    disabledCallText: {
         color: "#929292"
     },
 
@@ -349,7 +458,7 @@ const styles = StyleSheet.create({
     },
 
     bidScroll: {
-        maxHeight: 245
+        maxHeight: 235
     },
 
     bidScrollContent: {

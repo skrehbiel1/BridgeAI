@@ -23,6 +23,15 @@ import {
     BidSuit
 } from "./Bid";
 
+const BID_SUITS:
+    BidSuit[] = [
+        Suit.Clubs,
+        Suit.Diamonds,
+        Suit.Hearts,
+        Suit.Spades,
+        "NT"
+    ];
+
 const BID_SUIT_ORDER:
     Record<BidSuit, number> = {
         [Suit.Clubs]: 0,
@@ -38,16 +47,17 @@ export class Auction {
 
     currentSeat: Seat;
 
-constructor(
-    public dealer: Seat = Seat.North
-) {
-    this.currentSeat =
-        dealer;
-}
+    constructor(
+        public dealer:
+            Seat = Seat.North
+    ) {
+        this.currentSeat =
+            dealer;
+    }
 
     /*
-     * Compatibility helper for existing code
-     * that expects auction.bids.
+     * Compatibility helper for code that still
+     * reads auction.bids.
      */
     get bids(): Bid[] {
         return this.calls.map(
@@ -82,105 +92,169 @@ constructor(
         return true;
     }
 
-isLegalBid(
-    bid: Bid
-): boolean {
-    if (bid.isPass()) {
-        return true;
+    isLegalBid(
+        bid: Bid
+    ): boolean {
+        if (bid.isPass()) {
+            return true;
+        }
+
+        if (bid.isDouble()) {
+            return this.canDouble();
+        }
+
+        if (bid.isRedouble()) {
+            return this.canRedouble();
+        }
+
+        if (
+            !bid.isContract() ||
+            bid.level === undefined ||
+            bid.suit === undefined
+        ) {
+            return false;
+        }
+
+        if (
+            bid.level < 1 ||
+            bid.level > 7
+        ) {
+            return false;
+        }
+
+        const previousContract =
+            this.lastContract();
+
+        if (!previousContract) {
+            return true;
+        }
+
+        return (
+            this.bidValue(bid) >
+            this.bidValue(
+                previousContract
+            )
+        );
     }
 
-    if (bid.isDouble()) {
-        return this.canDouble();
+    canDouble(): boolean {
+        const contractCall =
+            this.lastContractCall();
+
+        if (!contractCall) {
+            return false;
+        }
+
+        /*
+         * A double is legal only when the most
+         * recent non-pass call is a contract bid.
+         *
+         * Passes may occur between that contract
+         * bid and the double.
+         */
+        const lastNonPassCall =
+            this.lastNonPassCall();
+
+        if (
+            !lastNonPassCall ||
+            !lastNonPassCall.bid
+                .isContract()
+        ) {
+            return false;
+        }
+
+        /*
+         * The player doubling must be on the
+         * opposing partnership.
+         */
+        return (
+            partnershipOf(
+                this.currentSeat
+            ) !==
+            partnershipOf(
+                contractCall.seat
+            )
+        );
     }
 
-    if (bid.isRedouble()) {
-        return this.canRedouble();
+    canRedouble(): boolean {
+        const contractCall =
+            this.lastContractCall();
+
+        if (!contractCall) {
+            return false;
+        }
+
+        /*
+         * A redouble is legal only when the most
+         * recent non-pass call was a double.
+         */
+        const lastNonPassCall =
+            this.lastNonPassCall();
+
+        if (
+            !lastNonPassCall ||
+            !lastNonPassCall.bid
+                .isDouble()
+        ) {
+            return false;
+        }
+
+        /*
+         * The player redoubling must be on the
+         * partnership that owns the contract.
+         */
+        return (
+            partnershipOf(
+                this.currentSeat
+            ) ===
+            partnershipOf(
+                contractCall.seat
+            )
+        );
     }
 
-    if (
-        !bid.isContract() ||
-        bid.level === undefined ||
-        bid.suit === undefined
-    ) {
-        return false;
-    }
-
-    const level =
-        bid.level;
-
-    if (
-        level < 1 ||
-        level > 7
-    ) {
-        return false;
-    }
-
-    const previousContract =
-        this.lastContract();
-
-    if (!previousContract) {
-        return true;
-    }
-
-    return (
-        this.bidValue(bid) >
-        this.bidValue(
-            previousContract
-        )
-    );
-}
-
-    legalContractBids(): Bid[] {
-        const bids: Bid[] = [];
-
-        const suits: BidSuit[] = [
-            Suit.Clubs,
-            Suit.Diamonds,
-            Suit.Hearts,
-            Suit.Spades,
-            "NT"
-        ];
+    legalContractBids():
+        Bid[] {
+        const legalBids:
+            Bid[] = [];
 
         for (
             let level = 1;
             level <= 7;
             level++
         ) {
-            for (const suit of suits) {
+            for (
+                const suit of
+                BID_SUITS
+            ) {
                 const bid =
-                  Bid.Contract(
-    level,
-    suit
-);
+                    Bid.Contract(
+                        level,
+                        suit
+                    );
 
                 if (
-                    this.isLegalBid(bid)
+                    this.isLegalBid(
+                        bid
+                    )
                 ) {
-                    bids.push(bid);
+                    legalBids.push(
+                        bid
+                    );
                 }
             }
         }
 
-        return bids;
+        return legalBids;
     }
 
     lastContract():
         Bid | undefined {
-        for (
-            let index =
-                this.calls.length - 1;
-            index >= 0;
-            index--
-        ) {
-            const bid =
-                this.calls[index].bid;
+        const call =
+            this.lastContractCall();
 
-            if (!bid.isPass()) {
-                return bid;
-            }
-        }
-
-        return undefined;
+        return call?.bid;
     }
 
     lastContractCall():
@@ -194,7 +268,9 @@ isLegalBid(
             const call =
                 this.calls[index];
 
-            if (!call.bid.isPass()) {
+            if (
+                call.bid.isContract()
+            ) {
                 return call;
             }
         }
@@ -217,7 +293,11 @@ isLegalBid(
             return true;
         }
 
-        if (!this.lastContract()) {
+        /*
+         * An auction cannot end until at least
+         * one contract bid has been made.
+         */
+        if (!this.lastContractCall()) {
             return false;
         }
 
@@ -225,6 +305,10 @@ isLegalBid(
             return false;
         }
 
+        /*
+         * After a contract, double, or redouble,
+         * three consecutive passes end the auction.
+         */
         return this.calls
             .slice(-3)
             .every(
@@ -242,214 +326,197 @@ isLegalBid(
             return undefined;
         }
 
-        const finalCall =
+        const finalContractCall =
             this.lastContractCall();
 
-        if (!finalCall) {
+        if (
+            !finalContractCall ||
+            finalContractCall.bid
+                .level === undefined ||
+            finalContractCall.bid
+                .suit === undefined
+        ) {
             return undefined;
         }
 
         const declarer =
             this.determineDeclarer(
-                finalCall
+                finalContractCall
             );
 
-if (
-    finalCall.bid.level === undefined ||
-    finalCall.bid.suit === undefined
-) {
-    return undefined;
-}
-
-return new Contract(
-    finalCall.bid.level,
-    finalCall.bid.suit,
-    declarer,
-    this.contractMultiplier()
-);    }
-
-
-canDouble(): boolean {
-    const contractCall =
-        this.lastContractCall();
-
-    if (!contractCall) {
-        return false;
-    }
-
-    const lastNonPass =
-        this.lastNonPassCall();
-
-    if (
-        !lastNonPass ||
-        !lastNonPass.bid.isContract()
-    ) {
-        return false;
-    }
-
-    return (
-        partnershipOf(
-            contractCall.seat
-        ) !==
-        partnershipOf(
-            this.currentSeat
-        )
-    );
-}
-
-canRedouble(): boolean {
-    const contractCall =
-        this.lastContractCall();
-
-    const lastNonPass =
-        this.lastNonPassCall();
-
-    if (
-        !contractCall ||
-        !lastNonPass ||
-        !lastNonPass.bid.isDouble()
-    ) {
-        return false;
-    }
-
-    return (
-        partnershipOf(
-            contractCall.seat
-        ) ===
-        partnershipOf(
-            this.currentSeat
-        )
-    );
-}
-
-private lastNonPassCall():
-    AuctionCall | undefined {
-    for (
-        let index =
-            this.calls.length - 1;
-        index >= 0;
-        index--
-    ) {
-        const call =
-            this.calls[index];
-
-        if (!call.bid.isPass()) {
-            return call;
-        }
-    }
-
-    return undefined;
-}
-
-private contractMultiplier():
-    ContractMultiplier {
-    let contractIndex = -1;
-
-    for (
-        let index =
-            this.calls.length - 1;
-        index >= 0;
-        index--
-    ) {
-        if (
-            this.calls[index]
+        return new Contract(
+            finalContractCall
                 .bid
-                .isContract()
-        ) {
-            contractIndex = index;
-            break;
-        }
-    }
-
-    if (contractIndex < 0) {
-        return (
-            ContractMultiplier.Undoubled
+                .level,
+            finalContractCall
+                .bid
+                .suit,
+            declarer,
+            this.contractMultiplier()
         );
     }
-
-    const callsAfterContract =
-        this.calls.slice(
-            contractIndex + 1
-        );
-
-    if (
-        callsAfterContract.some(
-            call =>
-                call.bid.isRedouble()
-        )
-    ) {
-        return (
-            ContractMultiplier.Redoubled
-        );
-    }
-
-    if (
-        callsAfterContract.some(
-            call =>
-                call.bid.isDouble()
-        )
-    ) {
-        return (
-            ContractMultiplier.Doubled
-        );
-    }
-
-    return (
-        ContractMultiplier.Undoubled
-    );
-}
-
 
     private determineDeclarer(
-        finalCall: AuctionCall
+        finalContractCall:
+            AuctionCall
     ): Seat {
-        const finalPartnership =
+        const finalSuit =
+            finalContractCall
+                .bid
+                .suit;
+
+        if (
+            finalSuit === undefined
+        ) {
+            return (
+                finalContractCall.seat
+            );
+        }
+
+        const declaringPartnership =
             partnershipOf(
-                finalCall.seat
+                finalContractCall.seat
             );
 
-        const finalSuit =
-            finalCall.bid.suit;
-
+        /*
+         * Declarer is the first player from the
+         * declaring partnership who bid the final
+         * contract strain.
+         */
         const firstMatchingCall =
             this.calls.find(
                 call =>
-                    !call.bid.isPass() &&
+                    call.bid
+                        .isContract() &&
                     call.bid.suit ===
                         finalSuit &&
                     partnershipOf(
                         call.seat
                     ) ===
-                        finalPartnership
+                        declaringPartnership
             );
 
         return (
             firstMatchingCall?.seat ??
-            finalCall.seat
+            finalContractCall.seat
         );
     }
 
-private bidValue(
-    bid: Bid
-): number {
-    if (
-        !bid.isContract() ||
-        bid.level === undefined ||
-        bid.suit === undefined
-    ) {
+    private lastNonPassCall():
+        AuctionCall | undefined {
+        for (
+            let index =
+                this.calls.length - 1;
+            index >= 0;
+            index--
+        ) {
+            const call =
+                this.calls[index];
+
+            if (
+                !call.bid.isPass()
+            ) {
+                return call;
+            }
+        }
+
+        return undefined;
+    }
+
+    private contractMultiplier():
+        ContractMultiplier {
+        const contractIndex =
+            this.lastContractIndex();
+
+        if (contractIndex < 0) {
+            return (
+                ContractMultiplier
+                    .Undoubled
+            );
+        }
+
+        /*
+         * Only calls after the final contract bid
+         * affect that contract's multiplier.
+         *
+         * A later contract bid therefore cancels
+         * any earlier double or redouble.
+         */
+        const callsAfterContract =
+            this.calls.slice(
+                contractIndex + 1
+            );
+
+        const wasRedoubled =
+            callsAfterContract.some(
+                call =>
+                    call.bid
+                        .isRedouble()
+            );
+
+        if (wasRedoubled) {
+            return (
+                ContractMultiplier
+                    .Redoubled
+            );
+        }
+
+        const wasDoubled =
+            callsAfterContract.some(
+                call =>
+                    call.bid
+                        .isDouble()
+            );
+
+        if (wasDoubled) {
+            return (
+                ContractMultiplier
+                    .Doubled
+            );
+        }
+
+        return (
+            ContractMultiplier
+                .Undoubled
+        );
+    }
+
+    private lastContractIndex():
+        number {
+        for (
+            let index =
+                this.calls.length - 1;
+            index >= 0;
+            index--
+        ) {
+            if (
+                this.calls[index]
+                    .bid
+                    .isContract()
+            ) {
+                return index;
+            }
+        }
+
         return -1;
     }
 
-    const level =
-        bid.level;
+    private bidValue(
+        bid: Bid
+    ): number {
+        if (
+            !bid.isContract() ||
+            bid.level === undefined ||
+            bid.suit === undefined
+        ) {
+            return -1;
+        }
 
-    const suit =
-        bid.suit;
-
-    return (
-        level * 5 +
-        BID_SUIT_ORDER[suit]
-    );
-}
-
+        return (
+            bid.level * 5 +
+            BID_SUIT_ORDER[
+                bid.suit
+            ]
+        );
+    }
 }
