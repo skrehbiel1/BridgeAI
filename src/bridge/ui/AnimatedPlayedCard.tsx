@@ -5,6 +5,7 @@ import React, {
 
 import {
     Animated,
+    Pressable,
     StyleSheet,
     Text,
     View
@@ -23,18 +24,27 @@ interface Props {
     seat: Seat;
     winner?: boolean;
     collectToSeat?: Seat;
+
+    hasExplanation?: boolean;
+    onPress?: () => void;
 }
 
-function displayRank(rank: number): string {
+function displayRank(
+    rank: number
+): string {
     switch (rank) {
         case 14:
             return "A";
+
         case 13:
             return "K";
+
         case 12:
             return "Q";
+
         case 11:
             return "J";
+
         default:
             return String(rank);
     }
@@ -43,8 +53,10 @@ function displayRank(rank: number): string {
 function suitColor(
     suit: Suit
 ): string {
-    return suit === Suit.Hearts ||
+    return (
+        suit === Suit.Hearts ||
         suit === Suit.Diamonds
+    )
         ? "#C62828"
         : "#111111";
 }
@@ -113,20 +125,25 @@ export default function AnimatedPlayedCard({
     card,
     seat,
     winner = false,
-    collectToSeat
+    collectToSeat,
+    hasExplanation = false,
+    onPress
 }: Props) {
-
     const start =
         startingOffset(seat);
 
     const translateX =
         useRef(
-            new Animated.Value(start.x)
+            new Animated.Value(
+                start.x
+            )
         ).current;
 
     const translateY =
         useRef(
-            new Animated.Value(start.y)
+            new Animated.Value(
+                start.y
+            )
         ).current;
 
     const opacity =
@@ -139,13 +156,11 @@ export default function AnimatedPlayedCard({
             new Animated.Value(0.85)
         ).current;
 
-    //
-    // Entrance animation
-    //
+    /*
+     * Entrance animation.
+     */
     useEffect(() => {
-
         Animated.parallel([
-
             Animated.spring(
                 translateX,
                 {
@@ -178,17 +193,22 @@ export default function AnimatedPlayedCard({
                     useNativeDriver: true
                 }
             )
-
         ]).start();
+    }, [
+        opacity,
+        scale,
+        translateX,
+        translateY
+    ]);
 
-    }, []);
-
-    //
-    // Collect trick animation
-    //
+    /*
+     * Trick-collection animation.
+     */
     useEffect(() => {
-
-        if (collectToSeat === undefined) {
+        if (
+            collectToSeat ===
+            undefined
+        ) {
             return;
         }
 
@@ -198,7 +218,6 @@ export default function AnimatedPlayedCard({
             );
 
         Animated.parallel([
-
             Animated.timing(
                 translateX,
                 {
@@ -234,13 +253,25 @@ export default function AnimatedPlayedCard({
                     useNativeDriver: true
                 }
             )
-
         ]).start();
+    }, [
+        collectToSeat,
+        opacity,
+        scale,
+        translateX,
+        translateY
+    ]);
 
-    }, [collectToSeat]);
+    const cardLabel =
+        `${displayRank(card.rank)}` +
+        `${suitSymbol(card.suit)}`;
+
+    const canExplain =
+        hasExplanation &&
+        onPress !== undefined &&
+        collectToSeat === undefined;
 
     return (
-
         <Animated.View
             style={[
                 styles.card,
@@ -260,15 +291,30 @@ export default function AnimatedPlayedCard({
                 }
             ]}
         >
-
-            <View
-                style={[
+            <Pressable
+                accessibilityRole={
+                    canExplain
+                        ? "button"
+                        : undefined
+                }
+                accessibilityLabel={
+                    canExplain
+                        ? `Explain ${cardLabel} played by ${seat}`
+                        : cardLabel
+                }
+                disabled={!canExplain}
+                onPress={onPress}
+                style={({
+                    pressed
+                }) => [
                     styles.cardFace,
                     winner &&
-                        styles.winningCard
+                        styles.winningCard,
+                    pressed &&
+                        canExplain &&
+                        styles.cardPressed
                 ]}
             >
-
                 <Text
                     style={[
                         styles.cardText,
@@ -280,24 +326,30 @@ export default function AnimatedPlayedCard({
                         }
                     ]}
                 >
-                    {displayRank(
-                        card.rank
-                    )}
-                    {suitSymbol(
-                        card.suit
-                    )}
+                    {cardLabel}
                 </Text>
 
-            </View>
-
+                {hasExplanation && (
+                    <View
+                        style={
+                            styles.explanationBadge
+                        }
+                    >
+                        <Text
+                            style={
+                                styles.explanationBadgeText
+                            }
+                        >
+                            ?
+                        </Text>
+                    </View>
+                )}
+            </Pressable>
         </Animated.View>
-
     );
-
 }
 
 const styles = StyleSheet.create({
-
     card: {
         width: 48,
         height: 58
@@ -305,6 +357,7 @@ const styles = StyleSheet.create({
 
     cardFace: {
         flex: 1,
+        position: "relative",
         backgroundColor: "#FFFFFF",
         borderRadius: 6,
         borderWidth: 1,
@@ -314,10 +367,8 @@ const styles = StyleSheet.create({
 
         elevation: 4,
 
-        shadowColor: "#000",
-
+        shadowColor: "#000000",
         shadowOpacity: 0.25,
-
         shadowRadius: 3,
 
         shadowOffset: {
@@ -327,29 +378,47 @@ const styles = StyleSheet.create({
     },
 
     winningCard: {
-
         borderColor: "#FFD600",
-
         borderWidth: 3,
-
         backgroundColor: "#FFFDE7",
 
         elevation: 10,
 
         shadowOpacity: 0.55,
-
         shadowRadius: 8
+    },
 
+    cardPressed: {
+        opacity: 0.72,
+        transform: [
+            {
+                scale: 0.96
+            }
+        ]
     },
 
     cardText: {
-
         fontSize: 18,
-
         fontWeight: "700",
-
         includeFontPadding: false
+    },
 
+    explanationBadge: {
+        position: "absolute",
+        top: 2,
+        right: 2,
+        width: 15,
+        height: 15,
+        borderRadius: 8,
+        backgroundColor: "#2E7D32",
+        alignItems: "center",
+        justifyContent: "center"
+    },
+
+    explanationBadgeText: {
+        color: "#FFFFFF",
+        fontSize: 10,
+        fontWeight: "900",
+        includeFontPadding: false
     }
-
 });

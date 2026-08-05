@@ -1,6 +1,11 @@
-import React from "react";
+import React, {
+    useState
+} from "react";
 
 import {
+    Modal,
+    Pressable,
+    ScrollView,
     StyleSheet,
     Text,
     View
@@ -11,11 +16,14 @@ import {
     Suit
 } from "../cards/Card";
 
-import AnimatedPlayedCard from "./AnimatedPlayedCard";
-
 import { Seat } from "../core/Seat";
+import { PlayedCard } from "../play/PlayedCard";
 import { Trick } from "../play/Trick";
+
 import { suitSymbol } from "../cards/SuitDisplay";
+
+import AnimatedPlayedCard
+from "./AnimatedPlayedCard";
 
 interface Props {
     trick: Trick;
@@ -23,8 +31,348 @@ interface Props {
     collecting?: boolean;
 }
 
-interface PlayedCardProps {
-    card: Card;
+export default function TableCenter({
+    trick,
+    winnerSeat,
+    collecting = false
+}: Props) {
+    const [
+        selectedPlay,
+        setSelectedPlay
+    ] = useState<
+        PlayedCard | null
+    >(null);
+
+    const cardAt = (
+        seat: Seat
+    ): PlayedCard | undefined =>
+        trick.cards.find(
+            played =>
+                played.seat === seat
+        );
+
+    const north =
+        cardAt(Seat.North);
+
+    const east =
+        cardAt(Seat.East);
+
+    const south =
+        cardAt(Seat.South);
+
+    const west =
+        cardAt(Seat.West);
+
+    function renderPlayedCard(
+        played:
+            PlayedCard | undefined,
+        seat: Seat
+    ) {
+        if (!played) {
+            return null;
+        }
+
+        return (
+            <AnimatedPlayedCard
+                card={played.card}
+                seat={seat}
+                winner={
+                    winnerSeat === seat
+                }
+                collectToSeat={
+                    collecting
+                        ? winnerSeat
+                        : undefined
+                }
+                hasExplanation={
+                    played.explanation !==
+                    undefined
+                }
+                onPress={
+                    played.explanation
+                        ? () =>
+                            setSelectedPlay(
+                                played
+                            )
+                        : undefined
+                }
+            />
+        );
+    }
+
+    return (
+        <>
+            <View style={styles.table}>
+                <Text style={styles.label}>
+                    Current Trick
+                </Text>
+
+                <View
+                    style={
+                        styles.northPosition
+                    }
+                >
+                    {renderPlayedCard(
+                        north,
+                        Seat.North
+                    )}
+                </View>
+
+                <View
+                    style={
+                        styles.westPosition
+                    }
+                >
+                    {renderPlayedCard(
+                        west,
+                        Seat.West
+                    )}
+                </View>
+
+                <View
+                    style={
+                        styles.eastPosition
+                    }
+                >
+                    {renderPlayedCard(
+                        east,
+                        Seat.East
+                    )}
+                </View>
+
+                <View
+                    style={
+                        styles.southPosition
+                    }
+                >
+                    {renderPlayedCard(
+                        south,
+                        Seat.South
+                    )}
+                </View>
+            </View>
+
+            <PlayExplanationModal
+                played={selectedPlay}
+                onClose={() =>
+                    setSelectedPlay(
+                        null
+                    )
+                }
+            />
+        </>
+    );
+}
+
+function PlayExplanationModal({
+    played,
+    onClose
+}: {
+    played: PlayedCard | null;
+    onClose: () => void;
+}) {
+    if (
+        !played ||
+        !played.explanation
+    ) {
+        return null;
+    }
+
+    const explanation =
+        played.explanation;
+
+    return (
+        <Modal
+            visible
+            transparent
+            animationType="slide"
+            onRequestClose={onClose}
+        >
+            <View
+                style={
+                    styles.modalBackdrop
+                }
+            >
+                <View
+                    style={
+                        styles.modalPanel
+                    }
+                >
+                    <View
+                        style={
+                            styles.modalHeader
+                        }
+                    >
+                        <View>
+                            <Text
+                                style={[
+                                    styles.modalCard,
+                                    {
+                                        color:
+                                            suitColor(
+                                                played.card.suit
+                                            )
+                                    }
+                                ]}
+                            >
+                                {cardText(
+                                    played.card
+                                )}
+                            </Text>
+
+                            <Text
+                                style={
+                                    styles.modalSeat
+                                }
+                            >
+                                Played by{" "}
+                                {played.seat}
+                            </Text>
+                        </View>
+
+                        <Pressable
+                            accessibilityRole="button"
+                            accessibilityLabel="Close play explanation"
+                            onPress={onClose}
+                            style={({
+                                pressed
+                            }) => [
+                                styles.closeButton,
+                                pressed &&
+                                    styles.closeButtonPressed
+                            ]}
+                        >
+                            <Text
+                                style={
+                                    styles.closeButtonText
+                                }
+                            >
+                                Close
+                            </Text>
+                        </Pressable>
+                    </View>
+
+                    <ScrollView
+                        showsVerticalScrollIndicator={
+                            false
+                        }
+                        contentContainerStyle={
+                            styles.modalContent
+                        }
+                    >
+                        <Text
+                            style={
+                                styles.explanationTitle
+                            }
+                        >
+                            {explanation.title}
+                        </Text>
+
+                        <Text
+                            style={
+                                styles.ruleLabel
+                            }
+                        >
+                            Rule
+                        </Text>
+
+                        <Text
+                            style={
+                                styles.ruleText
+                            }
+                        >
+                            {explanation.rule}
+                        </Text>
+
+                        <Text
+                            style={
+                                styles.summaryText
+                            }
+                        >
+                            {explanation.summary}
+                        </Text>
+
+                        <ExplanationSection
+                            title="Reasons"
+                            entries={
+                                explanation.facts
+                            }
+                        />
+
+                        <ExplanationSection
+                            title="Alternatives"
+                            entries={
+                                explanation.alternatives
+                            }
+                        />
+                    </ScrollView>
+                </View>
+            </View>
+        </Modal>
+    );
+}
+
+function ExplanationSection({
+    title,
+    entries
+}: {
+    title: string;
+    entries: string[];
+}) {
+    if (entries.length === 0) {
+        return null;
+    }
+
+    return (
+        <View style={styles.section}>
+            <Text
+                style={
+                    styles.sectionTitle
+                }
+            >
+                {title}
+            </Text>
+
+            {entries.map(
+                (
+                    entry,
+                    index
+                ) => (
+                    <View
+                        key={`${entry}-${index}`}
+                        style={
+                            styles.entryRow
+                        }
+                    >
+                        <Text
+                            style={
+                                styles.entryBullet
+                            }
+                        >
+                            •
+                        </Text>
+
+                        <Text
+                            style={
+                                styles.entryText
+                            }
+                        >
+                            {entry}
+                        </Text>
+                    </View>
+                )
+            )}
+        </View>
+    );
+}
+
+function cardText(
+    card: Card
+): string {
+    return (
+        `${displayRank(card.rank)}` +
+        `${suitSymbol(card.suit)}`
+    );
 }
 
 function displayRank(
@@ -61,109 +409,6 @@ function suitColor(
     return "#111111";
 }
 
-
-export default function TableCenter({
-    trick,
-    winnerSeat,
-    collecting = false
-}: Props) {
-    const cardAt = (
-        seat: Seat
-    ) =>
-        trick.cards.find(
-            played =>
-                played.seat === seat
-        );
-
-    const north =
-        cardAt(Seat.North);
-
-    const east =
-        cardAt(Seat.East);
-
-    const south =
-        cardAt(Seat.South);
-
-    const west =
-        cardAt(Seat.West);
-
-    return (
-        <View style={styles.table}>
-            <Text style={styles.label}>
-                Current Trick
-            </Text>
-
-<View style={styles.northPosition}>
-    {north && (
-        <AnimatedPlayedCard
-            card={north.card}
-            seat={Seat.North}
-            winner={
-                winnerSeat === Seat.North
-            }
-collectToSeat={
-    collecting
-        ? winnerSeat
-        : undefined
-}
-        />
-    )}
-</View>
-
-<View style={styles.westPosition}>
-    {west && (
-        <AnimatedPlayedCard
-            card={west.card}
-            seat={Seat.West}
-            winner={
-                winnerSeat === Seat.West
-            }
-collectToSeat={
-    collecting
-        ? winnerSeat
-        : undefined
-}
-        />
-    )}
-</View>
-
-<View style={styles.eastPosition}>
-    {east && (
-        <AnimatedPlayedCard
-            card={east.card}
-            seat={Seat.East}
-            winner={
-                winnerSeat === Seat.East
-            }
-collectToSeat={
-    collecting
-        ? winnerSeat
-        : undefined
-}
-        />
-    )}
-</View>
-
-<View style={styles.southPosition}>
-    {south && (
-        <AnimatedPlayedCard
-            card={south.card}
-            seat={Seat.South}
-            winner={
-                winnerSeat === Seat.South
-            }
-collectToSeat={
-    collecting
-        ? winnerSeat
-        : undefined
-}
-        />
-    )}
-</View>
-        </View>
-    );
-}
-
 const CARD_WIDTH = 48;
 const CARD_HEIGHT = 58;
 
@@ -182,35 +427,10 @@ const styles = StyleSheet.create({
         position: "absolute",
         top: 95,
         alignSelf: "center",
-        color: "rgba(255,255,255,0.5)",
+        color:
+            "rgba(255,255,255,0.5)",
         fontSize: 11,
         fontWeight: "600",
-        includeFontPadding: false
-    },
-
-    playedCard: {
-        width: CARD_WIDTH,
-        height: CARD_HEIGHT,
-        backgroundColor: "#FFFFFF",
-        borderWidth: 1,
-        borderColor: "#333333",
-        borderRadius: 6,
-        alignItems: "center",
-        justifyContent: "center",
-        elevation: 4,
-        shadowColor: "#000000",
-        shadowOpacity: 0.25,
-        shadowRadius: 3,
-        shadowOffset: {
-            width: 0,
-            height: 2
-        }
-    },
-
-    cardText: {
-        fontSize: 18,
-        fontWeight: "700",
-        lineHeight: 23,
         includeFontPadding: false
     },
 
@@ -244,5 +464,142 @@ const styles = StyleSheet.create({
         right: 17,
         width: CARD_WIDTH,
         height: CARD_HEIGHT
+    },
+
+    modalBackdrop: {
+        flex: 1,
+        backgroundColor:
+            "rgba(0, 0, 0, 0.52)",
+        justifyContent: "flex-end"
+    },
+
+    modalPanel: {
+        maxHeight: "82%",
+        backgroundColor: "#FFFFFF",
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingTop: 14,
+        paddingHorizontal: 18,
+        paddingBottom: 24
+    },
+
+    modalHeader: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent:
+            "space-between",
+        borderBottomWidth: 1,
+        borderBottomColor: "#E3E3E3",
+        paddingBottom: 12
+    },
+
+    modalCard: {
+        fontSize: 29,
+        fontWeight: "900",
+        includeFontPadding: false
+    },
+
+    modalSeat: {
+        color: "#666666",
+        fontSize: 13,
+        fontWeight: "600",
+        marginTop: 2,
+        includeFontPadding: false
+    },
+
+    closeButton: {
+        minWidth: 70,
+        minHeight: 38,
+        backgroundColor: "#EDF5EF",
+        borderWidth: 1,
+        borderColor: "#B8D0BD",
+        borderRadius: 9,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingHorizontal: 12
+    },
+
+    closeButtonPressed: {
+        opacity: 0.7
+    },
+
+    closeButtonText: {
+        color: "#173A26",
+        fontSize: 14,
+        fontWeight: "800",
+        includeFontPadding: false
+    },
+
+    modalContent: {
+        paddingTop: 16,
+        paddingBottom: 15
+    },
+
+    explanationTitle: {
+        color: "#173A26",
+        fontSize: 23,
+        fontWeight: "900",
+        marginBottom: 14,
+        includeFontPadding: false
+    },
+
+    ruleLabel: {
+        color: "#777777",
+        fontSize: 12,
+        fontWeight: "800",
+        textTransform: "uppercase",
+        letterSpacing: 0.6,
+        includeFontPadding: false
+    },
+
+    ruleText: {
+        color: "#1B1B1B",
+        fontSize: 18,
+        fontWeight: "800",
+        marginTop: 3,
+        includeFontPadding: false
+    },
+
+    summaryText: {
+        color: "#444444",
+        fontSize: 15,
+        lineHeight: 21,
+        marginTop: 10,
+        includeFontPadding: false
+    },
+
+    section: {
+        marginTop: 20
+    },
+
+    sectionTitle: {
+        color: "#173A26",
+        fontSize: 17,
+        fontWeight: "800",
+        marginBottom: 8,
+        includeFontPadding: false
+    },
+
+    entryRow: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        marginBottom: 7
+    },
+
+    entryBullet: {
+        width: 18,
+        color: "#2E7D32",
+        fontSize: 16,
+        fontWeight: "900",
+        lineHeight: 20,
+        includeFontPadding: false
+    },
+
+    entryText: {
+        flex: 1,
+        color: "#444444",
+        fontSize: 14,
+        lineHeight: 20,
+        includeFontPadding: false
     }
 });

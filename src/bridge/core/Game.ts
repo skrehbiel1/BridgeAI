@@ -18,6 +18,8 @@ import {Partnership,partnershipOf} from "./Partnership";
 
 import {PlayerController} from "./PlayerController";
 
+import {PlayExplanation} from "../ai/PlayExplanation";
+
 import { Contract } from "../play/Contract";import { PlayedCard } from "../play/PlayedCard";import { PlayValidator } from "../play/PlayValidator";import { Trick } from "../play/Trick";import { TrickWinner } from "../play/TrickWinner";
 
 import { DefenseAI } from "../ai/DefenseAI";
@@ -164,7 +166,9 @@ undoToPreviousHumanDecision():
 
 playCard(
     seat: Seat,
-    card: Card
+    card: Card,
+    explanation?:
+        PlayExplanation
 ): boolean {
     if (
         this.isFinished() ||
@@ -213,12 +217,12 @@ playCard(
         cardInHand
     );
 
-    const playedCard:
-        PlayedCard = {
-            seat,
-            card: cardInHand
-        };
-
+const playedCard:
+    PlayedCard = {
+        seat,
+        card: cardInHand,
+        explanation
+    };
     this.table
         .currentTrick
         .addCard(
@@ -284,28 +288,28 @@ playComputerTurn(): boolean {
             .currentTrick
             .leadSuit;
 
-    const aiCard =
-        controller.ai?.chooseCard(
-            seat,
-            hand,
-            this.table.currentTrick,
-            this.contract.trump
-        );
+const decision =
+    controller.ai?.chooseDecision(
+        seat,
+        hand,
+        this.table.currentTrick,
+        this.contract.trump
+    );
 
-    if (
-        aiCard &&
-        PlayValidator.isLegalPlay(
-            hand,
-            aiCard,
-            leadSuit
-        )
-    ) {
-        return this.playCard(
-            seat,
-            aiCard
-        );
-    }
-
+if (
+    decision &&
+    PlayValidator.isLegalPlay(
+        hand,
+        decision.card,
+        leadSuit
+    )
+) {
+    return this.playCard(
+        seat,
+        decision.card,
+        decision.explanation
+    );
+}
     /*
      * Safety fallback. The AI should normally
      * return a legal card itself.
@@ -490,15 +494,20 @@ private finishTrick(): void {
         const played of
         completedCards
     ) {
-        savedTrick.addCard({
-            seat:
-                played.seat,
+savedTrick.addCard({
+    seat:
+        played.seat,
 
-            card:
-                this.cloneCard(
-                    played.card
-                )
-        });
+    card:
+        this.cloneCard(
+            played.card
+        ),
+
+    explanation:
+        this.cloneExplanation(
+            played.explanation
+        )
+});
     }
 
     this.lastCompletedTrick =
@@ -556,21 +565,26 @@ private createSnapshot():
         currentSeat:
             this.currentSeat,
 
-        currentTrick:
-            this.table
-                .currentTrick
-                .cards
-                .map(
-                    played => ({
-                        seat:
-                            played.seat,
+currentTrick:
+    this.table
+        .currentTrick
+        .cards
+        .map(
+            played => ({
+                seat:
+                    played.seat,
 
-                        card:
-                            this.cloneCard(
-                                played.card
-                            )
-                    })
-                ),
+                card:
+                    this.cloneCard(
+                        played.card
+                    ),
+
+                explanation:
+                    this.cloneExplanation(
+                        played.explanation
+                    )
+            })
+        ),
 
         nsTricks:
             this.table.nsTricks,
@@ -643,18 +657,22 @@ private restoreSnapshot(
         const played of
         snapshot.currentTrick
     ) {
-        this.table
-            .currentTrick
-            .addCard({
-                seat:
-                    played.seat,
+this.table
+    .currentTrick
+    .addCard({
+        seat:
+            played.seat,
 
-                card:
-                    this.cloneCard(
-                        played.card
-                    )
-            });
-    }
+        card:
+            this.cloneCard(
+                played.card
+            ),
+
+        explanation:
+            this.cloneExplanation(
+                played.explanation
+            )
+    });    }
 
     this.openingLeadMade =
         snapshot.openingLeadMade;
@@ -725,19 +743,53 @@ private cloneTrick(
         const played of
         trick.cards
     ) {
-        copy.addCard({
-            seat:
-                played.seat,
+copy.addCard({
+    seat:
+        played.seat,
 
-            card:
-                this.cloneCard(
-                    played.card
-                )
-        });
+    card:
+        this.cloneCard(
+            played.card
+        ),
+
+    explanation:
+        this.cloneExplanation(
+            played.explanation
+        )
+});
     }
 
     return copy;
 }
+
+private cloneExplanation(
+    explanation:
+        PlayExplanation | undefined
+): PlayExplanation | undefined {
+    if (!explanation) {
+        return undefined;
+    }
+
+    return {
+        title:
+            explanation.title,
+
+        rule:
+            explanation.rule,
+
+        summary:
+            explanation.summary,
+
+        facts: [
+            ...explanation.facts
+        ],
+
+        alternatives: [
+            ...explanation.alternatives
+        ]
+    };
+}
+
 
 private cloneHistory(
     tricks:
