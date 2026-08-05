@@ -21,7 +21,7 @@ import {
 interface Props {
     auction: Auction;
     disabled?: boolean;
-
+    onHint?: () => void;
     onBid: (
         bid: Bid
     ) => void;
@@ -48,7 +48,8 @@ const BID_LEVELS = [
 export default function BiddingBox({
     auction,
     disabled = false,
-    onBid
+    onBid,
+    onHint
 }: Props) {
     function submitBid(
         bid: Bid
@@ -76,6 +77,34 @@ export default function BiddingBox({
             <Text style={styles.title}>
                 Your Bid
             </Text>
+
+{onHint && (
+    <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Suggest a bid"
+        disabled={disabled}
+        onPress={onHint}
+        style={({ pressed }) => [
+            styles.hintButton,
+            disabled &&
+                styles.disabledCallButton,
+            pressed &&
+                !disabled &&
+                styles.pressedButton
+        ]}
+    >
+        <Text
+            style={[
+                styles.hintButtonText,
+                disabled &&
+                    styles.disabledCallText
+            ]}
+        >
+            Hint
+        </Text>
+    </Pressable>
+)}
+
 
             <View style={styles.callButtonRow}>
                 <Pressable
@@ -505,6 +534,22 @@ const styles = StyleSheet.create({
         fontWeight: "800",
         includeFontPadding: false
     },
+hintButton: {
+    minHeight: 40,
+    backgroundColor: "#E8F5E9",
+    borderWidth: 2,
+    borderColor: "#2E7D32",
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 7
+},
+
+hintButtonText: {
+    color: "#1B5E20",
+    fontSize: 15,
+    fontWeight: "800"
+},
 
     pressedButton: {
         opacity: 0.72,

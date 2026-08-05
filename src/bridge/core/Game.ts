@@ -20,6 +20,10 @@ import {PlayerController} from "./PlayerController";
 
 import {PlayExplanation} from "../ai/PlayExplanation";
 
+import {PlayDecision} from "../ai/PlayDecision";
+
+import {TrickPlayEvaluator} from "../ai/TrickPlayEvaluator";
+
 import { Contract } from "../play/Contract";import { PlayedCard } from "../play/PlayedCard";import { PlayValidator } from "../play/PlayValidator";import { Trick } from "../play/Trick";import { TrickWinner } from "../play/TrickWinner";
 
 import { DefenseAI } from "../ai/DefenseAI";
@@ -257,6 +261,48 @@ const playedCard:
     }
 
     return true;
+}
+
+suggestPlay():
+    PlayDecision | undefined {
+    if (
+        this.isFinished() ||
+        !this.isHumanControlled(
+            this.currentSeat
+        )
+    ) {
+        return undefined;
+    }
+
+    const seat =
+        this.currentSeat;
+
+    const hand =
+        this.handOf(seat);
+
+    if (hand.cards.length === 0) {
+        return undefined;
+    }
+
+    if (
+        this.isDeclarerSide(seat)
+    ) {
+        return TrickPlayEvaluator
+            .chooseDeclarerDecision(
+                seat,
+                hand,
+                this.table.currentTrick,
+                this.contract.trump
+            );
+    }
+
+    return TrickPlayEvaluator
+        .chooseDefensiveDecision(
+            seat,
+            hand,
+            this.table.currentTrick,
+            this.contract.trump
+        );
 }
 
 playComputerTurn(): boolean {

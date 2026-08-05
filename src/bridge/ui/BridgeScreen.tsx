@@ -11,6 +11,8 @@ import { Contract } from "../play/Contract";
 
 import BridgeTable from "./BridgeTable";
 
+import {PlayDecision} from "../ai/PlayDecision";
+
 const COMPUTER_PLAY_DELAY_MS = 650;
 const COMPLETED_TRICK_DELAY_MS = 1000;
 
@@ -43,6 +45,13 @@ export default function BridgeScreen({
             version + 1,
         0
     );
+
+const [
+    playHint,
+    setPlayHint
+] = useState<
+    PlayDecision | null
+>(null);
 
 const [
     historyVisible,
@@ -203,6 +212,27 @@ useEffect(() => {
         redraw();
     }
 
+function showPlayHint(): void {
+    if (
+        showCompletedTrick ||
+        game.isFinished() ||
+        !game.isHumanControlled(
+            game.currentSeat
+        )
+    ) {
+        return;
+    }
+
+    const suggestion =
+        game.suggestPlay();
+
+    if (!suggestion) {
+        return;
+    }
+
+    setPlayHint(suggestion);
+}
+
 function undoToMyTurn(): void {
     if (
         !game
@@ -313,8 +343,13 @@ const canUndo =
     statusMessage={statusMessage}
     showCompletedTrick={showCompletedTrick}
     historyVisible={historyVisible}
-canUndo={canUndo}
-onUndo={undoToMyTurn}
+    canUndo={canUndo}
+    playHint={playHint}
+    onUndo={undoToMyTurn}
+    onShowHint={showPlayHint}
+    onCloseHint={() =>
+        setPlayHint(null)
+    }
     onShowHistory={() =>
         setHistoryVisible(true)
     }

@@ -17,6 +17,7 @@ import {
 
 import { Auction } from "../auction/Auction";
 import { Bid } from "../auction/Bid";
+import { BidDecision } from "../auction/BidDecision";
 import { BiddingAI } from "../auction/BiddingAI";
 
 import {
@@ -36,6 +37,7 @@ import AuctionHistoryView from "./AuctionHistoryView";
 import BiddingBox from "./BiddingBox";
 import BridgeScreen from "./BridgeScreen";
 import HandView from "./HandView";
+import HintModal from "./HintModal";
 
 const COMPUTER_BID_DELAY_MS = 650;
 
@@ -68,8 +70,8 @@ function createSession(): SessionState {
 export default function BridgeSessionScreen() {
     /*
      * Auction and hand objects are mutable.
-     * Incrementing renderVersion forces React
-     * to render their updated state.
+     * Incrementing this value forces React
+     * to display their current state.
      */
     const [
         renderVersion,
@@ -86,6 +88,13 @@ export default function BridgeSessionScreen() {
     ] = useState<SessionState>(
         createSession
     );
+
+    const [
+        bidHint,
+        setBidHint
+    ] = useState<
+        BidDecision | null
+    >(null);
 
     const {
         auction,
@@ -122,20 +131,17 @@ export default function BridgeSessionScreen() {
                 const bidder =
                     auction.currentSeat;
 
-                const hand =
-                    hands[bidder];
+                const decision =
+                    BiddingAI.chooseDecision(
+                        hands[bidder],
+                        auction
+                    );
 
-const decision =
-    BiddingAI.chooseDecision(
-        hands[bidder],
-        auction
-    );
-
-const accepted =
-    auction.addBid(
-        decision.bid,
-        decision.explanation
-    );
+                const accepted =
+                    auction.addBid(
+                        decision.bid,
+                        decision.explanation
+                    );
 
                 if (!accepted) {
                     return;
@@ -159,6 +165,12 @@ const accepted =
     function makeSouthBid(
         bid: Bid
     ): void {
+        /*
+         * Close any displayed suggestion when
+         * the player submits an actual call.
+         */
+        setBidHint(null);
+
         if (
             phase !== "auction" ||
             auction.currentSeat !==
@@ -169,7 +181,9 @@ const accepted =
         }
 
         const accepted =
-            auction.addBid(bid);
+            auction.addBid(
+                bid
+            );
 
         if (!accepted) {
             return;
@@ -180,11 +194,38 @@ const accepted =
         redraw();
     }
 
+    function showBidHint(): void {
+        if (
+            phase !== "auction" ||
+            auction.currentSeat !==
+                Seat.South ||
+            auction.isComplete()
+        ) {
+            return;
+        }
+
+        /*
+         * This evaluates the current South hand
+         * without submitting the suggested bid.
+         */
+        const suggestion =
+            BiddingAI.chooseDecision(
+                hands[Seat.South],
+                auction
+            );
+
+        setBidHint(
+            suggestion
+        );
+    }
+
     function finishAuctionIfNeeded():
         void {
         if (!auction.isComplete()) {
             return;
         }
+
+        setBidHint(null);
 
         if (auction.isPassedOut()) {
             setSession(current => ({
@@ -203,12 +244,11 @@ const accepted =
         }
 
         /*
-         * The current play UI assumes the human
-         * controls the North-South partnership.
+         * The current play UI fully supports
+         * North-South contracts.
          *
-         * East-West declarer play will be added
-         * after the play screen becomes fully
-         * contract-aware.
+         * East-West declarer play will be enabled
+         * when the side-seat dummy layout is added.
          */
         const humanSideWonContract =
             contract.declarer ===
@@ -227,7 +267,7 @@ const accepted =
         }
 
         /*
-         * The opening lead is made by the player
+         * Opening lead is made by the player
          * immediately to declarer's left.
          */
         const openingLeader =
@@ -236,8 +276,8 @@ const accepted =
             );
 
         /*
-         * Use the same four hands that were shown
-         * and evaluated during the auction.
+         * Preserve the same four hands used
+         * during the auction.
          */
         const preparedGame =
             new Game(
@@ -254,6 +294,8 @@ const accepted =
     }
 
     function startNewBoard(): void {
+        setBidHint(null);
+
         setSession(
             createSession()
         );
@@ -331,8 +373,8 @@ const accepted =
     }
 
     /*
-     * Temporary result when East-West wins the
-     * auction. Defender play will be added later.
+     * Temporary result screen when East-West
+     * wins the auction.
      */
     if (
         phase ===
@@ -386,8 +428,8 @@ const accepted =
                             styles.resultMessage
                         }
                     >
-                        Defender play will be
-                        added next.
+                        East-West declarer play
+                        will be added next.
                     </Text>
 
                     <Text
@@ -439,7 +481,7 @@ const accepted =
                 </Text>
 
                 <Text style={styles.subtitle}>
-                    Dealer: {auction.dealer} — OTA TEST
+                    Dealer: {auction.dealer}
                 </Text>
 
                 <AuctionHistoryView
@@ -470,7 +512,14 @@ const accepted =
                                     Seat.South
                                 ].cards.length
                             }{" "}
-                            cards
+                            {
+                                hands[
+                                    Seat.South
+                                ].cards.length ===
+                                1
+                                    ? "card"
+                                    : "cards"
+                            }
                         </Text>
                     </View>
 
@@ -504,7 +553,45 @@ const accepted =
                     onBid={
                         makeSouthBid
                     }
+                    onHint={
+                        showBidHint
+                    }
                 />
+
+                {bidHint && (
+                    <HintModal
+                        visible
+                        heading="Suggested bid"
+                        recommendation={
+                            bidHint.bid.toString()
+                        }
+                        rule={
+                            bidHint
+                                .explanation
+                                .rule
+                        }
+                        summary={
+                            bidHint
+                                .explanation
+                                .summary
+                        }
+                        facts={
+                            bidHint
+                                .explanation
+                                .facts
+                        }
+                        alternatives={
+                            bidHint
+                                .explanation
+                                .alternatives
+                        }
+                        onClose={() =>
+                            setBidHint(
+                                null
+                            )
+                        }
+                    />
+                )}
             </ScrollView>
         </SafeAreaView>
     );

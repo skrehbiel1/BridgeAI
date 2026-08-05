@@ -25,6 +25,12 @@ import EndOfHandSummary from "./EndOfHandSummary";
 
 import TrickHistoryView from "./TrickHistoryView";
 
+import {PlayDecision} from "../ai/PlayDecision";
+
+import HintModal from "./HintModal";
+
+import {suitSymbol} from "../cards/SuitDisplay";
+
 interface Props {
     game: Game;
     displayedTrick: Trick;
@@ -40,6 +46,9 @@ completedTrickWinner?: Seat;
     onCloseHistory: () => void;
     canUndo: boolean;
     onUndo: () => void;
+playHint: PlayDecision | null;
+onShowHint: () => void;
+onCloseHint: () => void;
 
     onPlayHumanCard: (
         seat: Seat,
@@ -61,6 +70,9 @@ export default function BridgeTable({
     collectingCompletedTrick,
     canUndo,
     onUndo,
+playHint,
+onShowHint,
+onCloseHint,
     historyVisible,
     onShowHistory,
     onCloseHistory,
@@ -158,6 +170,37 @@ const showNorthHand =
         </Text>
     </Pressable>
 
+<Pressable
+    accessibilityRole="button"
+    accessibilityLabel="Suggest a card to play"
+    disabled={
+        game.isFinished() ||
+        showCompletedTrick ||
+        !game.isHumanControlled(
+            game.currentSeat
+        )
+    }
+    onPress={onShowHint}
+    style={({ pressed }) => [
+        styles.actionButton,
+        (
+            game.isFinished() ||
+            showCompletedTrick ||
+            !game.isHumanControlled(
+                game.currentSeat
+            )
+        ) &&
+            styles.disabledActionButton,
+        pressed &&
+            styles.actionButtonPressed
+    ]}
+>
+    <Text style={styles.actionButtonText}>
+        Hint
+    </Text>
+</Pressable>
+
+
     <Pressable
         accessibilityRole="button"
         accessibilityLabel="Open trick history"
@@ -227,6 +270,34 @@ const showNorthHand =
     }
 />
 
+{playHint && (
+    <HintModal
+        visible
+        heading="Suggested play"
+        recommendation={
+            `${displayRank(
+                playHint.card.rank
+            )}${suitSymbol(
+                playHint.card.suit
+            )}`
+        }
+        rule={
+            playHint.explanation.rule
+        }
+        summary={
+            playHint.explanation.summary
+        }
+        facts={
+            playHint.explanation.facts
+        }
+        alternatives={
+            playHint.explanation.alternatives
+        }
+        onClose={onCloseHint}
+    />
+)}
+
+
 {game.isFinished() && (
     <EndOfHandSummary
         game={game}
@@ -237,6 +308,27 @@ const showNorthHand =
           </View>
         </SafeAreaView>
     );
+}
+
+function displayRank(
+    rank: number
+): string {
+    switch (rank) {
+        case 14:
+            return "A";
+
+        case 13:
+            return "K";
+
+        case 12:
+            return "Q";
+
+        case 11:
+            return "J";
+
+        default:
+            return String(rank);
+    }
 }
 
 const styles = StyleSheet.create({
