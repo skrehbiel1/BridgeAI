@@ -125,14 +125,17 @@ export default function BridgeSessionScreen() {
                 const hand =
                     hands[bidder];
 
-                const bid =
-                    BiddingAI.chooseBid(
-                        hand,
-                        auction
-                    );
+const decision =
+    BiddingAI.chooseDecision(
+        hands[bidder],
+        auction
+    );
 
-                const accepted =
-                    auction.addBid(bid);
+const accepted =
+    auction.addBid(
+        decision.bid,
+        decision.explanation
+    );
 
                 if (!accepted) {
                     return;

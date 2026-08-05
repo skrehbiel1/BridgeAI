@@ -19,6 +19,10 @@ import {
 } from "./AuctionCall";
 
 import {
+    BidExplanation
+} from "./BidExplanation";
+
+import {
     Bid,
     BidSuit
 } from "./Bid";
@@ -65,9 +69,11 @@ export class Auction {
         );
     }
 
-    addBid(
-        bid: Bid
-    ): boolean {
+addBid(
+    bid: Bid,
+    explanation?:
+        BidExplanation
+): boolean {
         if (
             this.isComplete() ||
             !this.isLegalBid(bid)
@@ -75,12 +81,13 @@ export class Auction {
             return false;
         }
 
-        this.calls.push(
-            new AuctionCall(
-                this.currentSeat,
-                bid
-            )
-        );
+this.calls.push(
+    new AuctionCall(
+        this.currentSeat,
+        bid,
+        explanation
+    )
+);
 
         if (!this.isComplete()) {
             this.currentSeat =

@@ -1,25 +1,52 @@
 import { BridgeAI } from "./BridgeAI";
+
 import { Card } from "../cards/Card";
 import { Hand } from "../cards/Hand";
-import { Trick } from "../play/Trick";
-import { TrumpSuit } from "../play/Contract";
+
 import { Seat } from "../core/Seat";
-import { TrickPlayEvaluator } from "./TrickPlayEvaluator";
+
+import {
+    TrumpSuit
+} from "../play/Contract";
+
+import { Trick } from "../play/Trick";
+
+import {
+    PlayDecision
+} from "./PlayDecision";
+
+import {
+    TrickPlayEvaluator
+} from "./TrickPlayEvaluator";
 
 export class DeclarerAI
 implements BridgeAI {
+    chooseDecision(
+        seat: Seat,
+        hand: Hand,
+        trick: Trick,
+        trump: TrumpSuit
+    ): PlayDecision {
+        return TrickPlayEvaluator
+            .chooseDeclarerDecision(
+                seat,
+                hand,
+                trick,
+                trump
+            );
+    }
+
     chooseCard(
         seat: Seat,
         hand: Hand,
         trick: Trick,
         trump: TrumpSuit
     ): Card {
-        return TrickPlayEvaluator
-            .chooseDeclarerCard(
-                seat,
-                hand,
-                trick,
-                trump
-            );
+        return this.chooseDecision(
+            seat,
+            hand,
+            trick,
+            trump
+        ).card;
     }
 }
