@@ -1,6 +1,10 @@
-import React from "react";
+import React, {
+    useEffect,
+    useRef
+} from "react";
 
 import {
+    Animated,
     Pressable,
     StyleSheet,
     Text,
@@ -19,6 +23,9 @@ interface Props {
     hand: Hand;
     leadSuit?: Suit;
     enabled?: boolean;
+
+    suggestedCard?: Card;
+
     onCardPlayed?: (
         index: number
     ) => void;
@@ -29,9 +36,19 @@ interface SuitRowProps {
     hand: Hand;
     leadSuit?: Suit;
     enabled: boolean;
+
+    suggestedCard?: Card;
+
     onCardPlayed?: (
         index: number
     ) => void;
+}
+
+interface RankButtonProps {
+    card: Card;
+    legal: boolean;
+    suggested: boolean;
+    onPress: () => void;
 }
 
 const SUIT_ORDER: Suit[] = [
@@ -91,11 +108,186 @@ function isLegalCard(
     return card.suit === leadSuit;
 }
 
+function cardsMatch(
+    first: Card,
+    second?: Card
+): boolean {
+    if (!second) {
+        return false;
+    }
+
+    return (
+        first.suit === second.suit &&
+        first.rank === second.rank
+    );
+}
+
+function RankButton({
+    card,
+    legal,
+    suggested,
+    onPress
+}: RankButtonProps) {
+    const pulse =
+        useRef(
+            new Animated.Value(0)
+        ).current;
+
+    useEffect(() => {
+        if (!suggested) {
+            pulse.stopAnimation();
+            pulse.setValue(0);
+            return;
+        }
+
+        const animation =
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(
+                        pulse,
+                        {
+                            toValue: 1,
+                            duration: 650,
+                            useNativeDriver:
+                                false
+                        }
+                    ),
+
+                    Animated.timing(
+                        pulse,
+                        {
+                            toValue: 0,
+                            duration: 650,
+                            useNativeDriver:
+                                false
+                        }
+                    )
+                ])
+            );
+
+        animation.start();
+
+        return () => {
+            animation.stop();
+        };
+    }, [
+        pulse,
+        suggested
+    ]);
+
+    const suggestedBackground =
+        pulse.interpolate({
+            inputRange: [
+                0,
+                1
+            ],
+
+            outputRange: [
+                "#E8F5E9",
+                "#A5D6A7"
+            ]
+        });
+
+    const suggestedBorder =
+        pulse.interpolate({
+            inputRange: [
+                0,
+                1
+            ],
+
+            outputRange: [
+                "#2E7D32",
+                "#00C853"
+            ]
+        });
+
+    return (
+        <Animated.View
+            style={[
+                styles.rankButtonWrapper,
+                suggested && {
+                    backgroundColor:
+                        suggestedBackground,
+
+                    borderColor:
+                        suggestedBorder
+                }
+            ]}
+        >
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                    `${displayRank(
+                        card.rank
+                    )} ` +
+                    `${suitSymbol(
+                        card.suit
+                    )}` +
+                    (
+                        suggested
+                            ? ", suggested play"
+                            : ""
+                    )
+                }
+                disabled={!legal}
+                onPress={onPress}
+                style={({
+                    pressed
+                }) => [
+                    styles.rankButton,
+                    legal &&
+                        styles.legalButton,
+                    suggested &&
+                        styles.suggestedButton,
+                    pressed &&
+                        legal &&
+                        styles.pressedButton
+                ]}
+            >
+                <Text
+                    style={[
+                        styles.rankText,
+                        {
+                            color:
+                                legal
+                                    ? suitColor(
+                                        card.suit
+                                    )
+                                    : "#C7C7C7"
+                        }
+                    ]}
+                >
+                    {displayRank(
+                        card.rank
+                    )}
+                </Text>
+
+                {suggested && (
+                    <View
+                        style={
+                            styles.hintBadge
+                        }
+                    >
+                        <Text
+                            style={
+                                styles.hintBadgeText
+                            }
+                        >
+                            ✓
+                        </Text>
+                    </View>
+                )}
+            </Pressable>
+        </Animated.View>
+    );
+}
+
 function SuitRow({
     suit,
     hand,
     leadSuit,
     enabled,
+    suggestedCard,
     onCardPlayed
 }: SuitRowProps) {
     const cards =
@@ -143,17 +335,23 @@ function SuitRow({
                             leadSuit
                         );
 
+                    const suggested =
+                        legal &&
+                        cardsMatch(
+                            card,
+                            suggestedCard
+                        );
+
                     return (
-                        <Pressable
+                        <RankButton
                             key={
                                 `${card.suit}-${card.rank}`
                             }
-                            accessibilityRole="button"
-                            accessibilityLabel={
-                                `${displayRank(card.rank)} ` +
-                                `${suitSymbol(card.suit)}`
+                            card={card}
+                            legal={legal}
+                            suggested={
+                                suggested
                             }
-                            disabled={!legal}
                             onPress={() => {
                                 if (
                                     legal &&
@@ -164,33 +362,7 @@ function SuitRow({
                                     );
                                 }
                             }}
-                            style={({ pressed }) => [
-                                styles.rankButton,
-                                legal &&
-                                    styles.legalButton,
-                                pressed &&
-                                    legal &&
-                                    styles.pressedButton
-                            ]}
-                        >
-                            <Text
-                                style={[
-                                    styles.rankText,
-                                    {
-                                        color:
-                                            legal
-                                                ? suitColor(
-                                                    suit
-                                                )
-                                                : "#C7C7C7"
-                                    }
-                                ]}
-                            >
-                                {displayRank(
-                                    card.rank
-                                )}
-                            </Text>
-                        </Pressable>
+                        />
                     );
                 })}
             </View>
@@ -202,6 +374,7 @@ export default function HandView({
     hand,
     leadSuit,
     enabled = true,
+    suggestedCard,
     onCardPlayed
 }: Props) {
     return (
@@ -213,6 +386,9 @@ export default function HandView({
                     hand={hand}
                     leadSuit={leadSuit}
                     enabled={enabled}
+                    suggestedCard={
+                        suggestedCard
+                    }
                     onCardPlayed={
                         onCardPlayed
                     }
@@ -243,7 +419,7 @@ const styles = StyleSheet.create({
     },
 
     suitRow: {
-        minHeight: 37,
+        minHeight: 39,
         flexDirection: "row",
         alignItems: "center"
     },
@@ -264,18 +440,30 @@ const styles = StyleSheet.create({
         flexWrap: "wrap"
     },
 
-    rankButton: {
-        minWidth: 34,
-        height: 32,
+    rankButtonWrapper: {
+        minWidth: 36,
+        height: 34,
         marginRight: 2,
+        borderRadius: 7,
+        borderWidth: 2,
+        borderColor: "transparent"
+    },
+
+    rankButton: {
+        flex: 1,
+        position: "relative",
         paddingHorizontal: 4,
-        borderRadius: 6,
+        borderRadius: 5,
         alignItems: "center",
         justifyContent: "center"
     },
 
     legalButton: {
         backgroundColor: "#F1F8E9"
+    },
+
+    suggestedButton: {
+        backgroundColor: "transparent"
     },
 
     pressedButton: {
@@ -291,6 +479,25 @@ const styles = StyleSheet.create({
         fontSize: 19,
         fontWeight: "800",
         lineHeight: 23,
+        includeFontPadding: false
+    },
+
+    hintBadge: {
+        position: "absolute",
+        top: -5,
+        right: -4,
+        width: 14,
+        height: 14,
+        borderRadius: 7,
+        backgroundColor: "#1B5E20",
+        alignItems: "center",
+        justifyContent: "center"
+    },
+
+    hintBadgeText: {
+        color: "#FFFFFF",
+        fontSize: 9,
+        fontWeight: "900",
         includeFontPadding: false
     },
 

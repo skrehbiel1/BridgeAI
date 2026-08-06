@@ -6,7 +6,7 @@ import {
 } from "react-native";
 
 import { Hand } from "../cards/Hand";
-import { Suit } from "../cards/Card";
+import { Card, Suit } from "../cards/Card";
 import { Seat } from "../core/Seat";
 
 import DummyHandView from "./DummyHandView";
@@ -23,6 +23,8 @@ interface Props {
     enabled: boolean;
     active: boolean;
 
+    suggestedCard?: Card;
+
     onCardPlayed: (
         seat: Seat,
         index: number
@@ -36,37 +38,40 @@ export default function NorthArea({
     leadSuit,
     enabled,
     active,
+    suggestedCard,
     onCardPlayed
 }: Props) {
     return (
         <View style={styles.container}>
             {showHand ? (
                 isDummy ? (
-                    <DummyHandView
-                        hand={hand}
-                        leadSuit={leadSuit}
-                        enabled={enabled}
-                        onCardPlayed={
-                            index =>
-                                onCardPlayed(
-                                    Seat.North,
-                                    index
-                                )
-                        }
-                    />
+<DummyHandView
+    hand={hand}
+    leadSuit={leadSuit}
+    enabled={enabled}
+    suggestedCard={suggestedCard}
+    onCardPlayed={
+        index =>
+            onCardPlayed(
+                Seat.North,
+                index
+            )
+    }
+/>
                 ) : (
-                    <HandView
-                        hand={hand}
-                        leadSuit={leadSuit}
-                        enabled={enabled}
-                        onCardPlayed={
-                            index =>
-                                onCardPlayed(
-                                    Seat.North,
-                                    index
-                                )
-                        }
-                    />
+<HandView
+    hand={hand}
+    leadSuit={leadSuit}
+    enabled={enabled}
+    suggestedCard={suggestedCard}
+    onCardPlayed={
+        index =>
+            onCardPlayed(
+                Seat.North,
+                index
+            )
+    }
+/>
                 )
             ) : (
                 <SeatView

@@ -28,6 +28,8 @@ import { Contract } from "../play/Contract";import { PlayedCard } from "../play/
 
 import { DefenseAI } from "../ai/DefenseAI";
 
+import { DeclarerAI } from "../ai/DeclarerAI";
+
 export interface TrickTotals {NS: number;EW: number;}
 
 interface GameSnapshot {hands: Record<Seat, Card[]>;
@@ -100,13 +102,17 @@ initialHands?: DealResult
     this.currentSeat =
         openingLeader;
 
-    /*
-     * South is declarer.
-     * North is dummy.
-     *
-     * The human controls North and South.
-     * East and West are computer controlled.
-     */
+/*
+ * Controller configuration depends on
+ * which partnership won the auction.
+ *
+ * North-South contract:
+ * human controls declarer and dummy.
+ *
+ * East-West contract:
+ * South is the human defender.
+ */
+
 this.controllers =
     this.createControllers();
 }
@@ -444,14 +450,20 @@ contractMade(): boolean {
 
 private createControllers():
     Record<Seat, PlayerController> {
+
     const declaringPartnership =
         partnershipOf(
             this.contract.declarer
         );
 
     /*
-     * When North-South wins the auction, the user
-     * controls declarer and dummy, as before.
+     * North-South contract:
+     *
+     * The user controls both declarer
+     * and dummy.
+     *
+     * East and West defend with
+     * defensive AI.
      */
     if (
         declaringPartnership ===
@@ -483,12 +495,34 @@ private createControllers():
     }
 
     /*
-     * When East-West wins the auction, South
-     * remains the user's defensive seat.
+     * East-West contract:
      *
-     * North, East and West are computer controlled.
-     * The declarer AI also controls its dummy.
+     * South remains the human defender.
+     *
+     * North is the other defender.
+     *
+     * Declarer and dummy are both
+     * controlled by declarer-side AI.
      */
+
+    const declarer =
+        this.declarerSeat();
+
+    const dummy =
+        this.dummySeat();
+
+    const eastAI =
+        Seat.East === declarer ||
+        Seat.East === dummy
+            ? new DeclarerAI()
+            : new DefenseAI();
+
+    const westAI =
+        Seat.West === declarer ||
+        Seat.West === dummy
+            ? new DeclarerAI()
+            : new DefenseAI();
+
     return {
         [Seat.North]:
             new PlayerController(
@@ -499,7 +533,7 @@ private createControllers():
         [Seat.East]:
             new PlayerController(
                 Seat.East,
-                new DefenseAI()
+                eastAI
             ),
 
         [Seat.South]:
@@ -510,7 +544,7 @@ private createControllers():
         [Seat.West]:
             new PlayerController(
                 Seat.West,
-                new DefenseAI()
+                westAI
             )
     };
 }

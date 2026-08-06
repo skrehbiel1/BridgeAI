@@ -6,8 +6,12 @@ import {
     View
 } from "react-native";
 
+import {
+    Card,
+    Suit
+} from "../cards/Card";
+
 import { Hand } from "../cards/Hand";
-import { Suit } from "../cards/Card";
 
 import HandView from "./HandView";
 
@@ -15,6 +19,9 @@ interface Props {
     hand: Hand;
     leadSuit?: Suit;
     enabled: boolean;
+
+    suggestedCard?: Card;
+
     onCardPlayed: (
         index: number
     ) => void;
@@ -24,6 +31,7 @@ export default function DummyHandView({
     hand,
     leadSuit,
     enabled,
+    suggestedCard,
     onCardPlayed
 }: Props) {
     return (
@@ -45,7 +53,12 @@ export default function DummyHandView({
                 hand={hand}
                 leadSuit={leadSuit}
                 enabled={enabled}
-                onCardPlayed={onCardPlayed}
+                suggestedCard={
+                    suggestedCard
+                }
+                onCardPlayed={
+                    onCardPlayed
+                }
             />
         </View>
     );
@@ -62,7 +75,8 @@ const styles = StyleSheet.create({
         width: "100%",
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent:
+            "space-between",
         paddingHorizontal: 4,
         marginBottom: 2
     },

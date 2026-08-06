@@ -1,34 +1,35 @@
-import React from "react";
+import React, {
+    useEffect,
+    useRef
+} from "react";
 
 import {
-    TouchableOpacity,
-    Text,
-    StyleSheet
-}
-from "react-native";
+    Animated,
+    Pressable,
+    StyleSheet,
+    Text
+} from "react-native";
 
-import { Card, Suit }
-from "../cards/Card";
+import {
+    Card,
+    Suit
+} from "../cards/Card";
 
-import { suitSymbol }
-from "../cards/SuitDisplay";
-
+import {
+    suitSymbol
+} from "../cards/SuitDisplay";
 
 interface Props {
-
     card: Card;
-
     onPress?: () => void;
-
+    suggested?: boolean;
+    disabled?: boolean;
 }
-
 
 function displayRank(
     rank: number
 ): string {
-
-    switch(rank){
-
+    switch (rank) {
         case 14:
             return "A";
 
@@ -43,89 +44,193 @@ function displayRank(
 
         default:
             return rank.toString();
-
     }
-
 }
-
 
 function suitColor(
     suit: Suit
 ): string {
-
-    switch(suit){
-
+    switch (suit) {
         case Suit.Hearts:
         case Suit.Diamonds:
-            return "red";
+            return "#C62828";
 
         default:
-            return "black";
-
+            return "#111111";
     }
-
 }
-
 
 export default function CardView({
-
     card,
+    onPress,
+    suggested = false,
+    disabled = false
+}: Props) {
+    const pulse =
+        useRef(
+            new Animated.Value(0)
+        ).current;
 
-    onPress
+    useEffect(() => {
+        if (!suggested) {
+            pulse.stopAnimation();
+            pulse.setValue(0);
+            return;
+        }
 
-}: Props){
+        const animation =
+            Animated.loop(
+                Animated.sequence([
+                    Animated.timing(
+                        pulse,
+                        {
+                            toValue: 1,
+                            duration: 650,
+                            useNativeDriver:
+                                false
+                        }
+                    ),
 
+                    Animated.timing(
+                        pulse,
+                        {
+                            toValue: 0,
+                            duration: 650,
+                            useNativeDriver:
+                                false
+                        }
+                    )
+                ])
+            );
+
+        animation.start();
+
+        return () => {
+            animation.stop();
+        };
+    }, [
+        pulse,
+        suggested
+    ]);
+
+    const borderColor =
+        suggested
+            ? pulse.interpolate({
+                inputRange: [
+                    0,
+                    1
+                ],
+
+                outputRange: [
+                    "#2E7D32",
+                    "#00C853"
+                ]
+            })
+            : "#333333";
 
     return (
-
-        <TouchableOpacity
-            style={styles.card}
-            onPress={onPress}
+        <Animated.View
+            style={[
+                styles.card,
+                {
+                    borderColor
+                },
+                suggested &&
+                    styles.suggestedCard
+            ]}
         >
-
-            <Text
-                style={[
-                    styles.text,
-                    {
-                        color:
-                        suitColor(
-                            card.suit
-                        )
-                    }
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={
+                    `${displayRank(
+                        card.rank
+                    )}${suitSymbol(
+                        card.suit
+                    )}` +
+                    (
+                        suggested
+                            ? ", suggested card"
+                            : ""
+                    )
+                }
+                disabled={disabled}
+                onPress={onPress}
+                style={({
+                    pressed
+                }) => [
+                    styles.cardPressable,
+                    pressed &&
+                        !disabled &&
+                        styles.pressed
                 ]}
             >
-                {
-		`${displayRank(card.rank)}${suitSymbol(card.suit)}`
-                }
-            </Text>
-
-        </TouchableOpacity>
-
+                <Text
+                    style={[
+                        styles.text,
+                        {
+                            color:
+                                suitColor(
+                                    card.suit
+                                )
+                        }
+                    ]}
+                >
+                    {
+                        `${displayRank(
+                            card.rank
+                        )}${suitSymbol(
+                            card.suit
+                        )}`
+                    }
+                </Text>
+            </Pressable>
+        </Animated.View>
     );
-
 }
 
+const styles = StyleSheet.create({
+    card: {
+        backgroundColor: "#FFFFFF",
+        borderWidth: 2,
+        borderRadius: 8,
+        margin: 4,
+        width: 60,
+        height: 60
+    },
 
-const styles =
-StyleSheet.create({
+    cardPressable: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        borderRadius: 6
+    },
 
-card: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 6,
-    margin: 4,
-    width: 60,
-    height: 60,
-    justifyContent: "center",
-    alignItems: "center"
-},
+    suggestedCard: {
+        backgroundColor: "#E8F5E9",
+        elevation: 8,
+        shadowColor: "#00C853",
+        shadowOpacity: 0.45,
+        shadowRadius: 7,
+        shadowOffset: {
+            width: 0,
+            height: 2
+        }
+    },
+
+    pressed: {
+        opacity: 0.72,
+        transform: [
+            {
+                scale: 0.95
+            }
+        ]
+    },
 
     text: {
-    fontSize: 18,
-    fontWeight: "bold",
-    lineHeight: 22,
-    textAlignVertical: "center",
-    includeFontPadding: false
+        fontSize: 18,
+        fontWeight: "bold",
+        lineHeight: 22,
+        textAlignVertical: "center",
+        includeFontPadding: false
     }
 });

@@ -44,8 +44,7 @@ const COMPUTER_BID_DELAY_MS = 650;
 type SessionPhase =
     | "auction"
     | "play"
-    | "passedOut"
-    | "unsupportedContract";
+    | "passedOut";
 
 interface SessionState {
     hands: DealResult;
@@ -243,28 +242,6 @@ export default function BridgeSessionScreen() {
             return;
         }
 
-        /*
-         * The current play UI fully supports
-         * North-South contracts.
-         *
-         * East-West declarer play will be enabled
-         * when the side-seat dummy layout is added.
-         */
-        const humanSideWonContract =
-            contract.declarer ===
-                Seat.North ||
-            contract.declarer ===
-                Seat.South;
-
-        if (!humanSideWonContract) {
-            setSession(current => ({
-                ...current,
-                phase:
-                    "unsupportedContract"
-            }));
-
-            return;
-        }
 
         /*
          * Opening lead is made by the player
@@ -354,82 +331,6 @@ export default function BridgeSessionScreen() {
                         }
                     >
                         All four players passed.
-                    </Text>
-
-                    <Text
-                        accessibilityRole="button"
-                        onPress={
-                            startNewBoard
-                        }
-                        style={
-                            styles.newBoardButton
-                        }
-                    >
-                        New Board
-                    </Text>
-                </View>
-            </SafeAreaView>
-        );
-    }
-
-    /*
-     * Temporary result screen when East-West
-     * wins the auction.
-     */
-    if (
-        phase ===
-        "unsupportedContract"
-    ) {
-        const contract =
-            auction.finalContract();
-
-        return (
-            <SafeAreaView
-                style={styles.safeArea}
-                edges={[
-                    "top",
-                    "right",
-                    "bottom",
-                    "left"
-                ]}
-            >
-                <View
-                    style={
-                        styles.resultPanel
-                    }
-                >
-                    <Text
-                        style={
-                            styles.resultTitle
-                        }
-                    >
-                        East–West Won the Auction
-                    </Text>
-
-                    {contract && (
-                        <Text
-                            style={
-                                styles.resultSubtitle
-                            }
-                        >
-                            Contract:{" "}
-                            {
-                                contract.toString()
-                            }{" "}
-                            by{" "}
-                            {
-                                contract.declarer
-                            }
-                        </Text>
-                    )}
-
-                    <Text
-                        style={
-                            styles.resultMessage
-                        }
-                    >
-                        East-West declarer play
-                        will be added next.
                     </Text>
 
                     <Text

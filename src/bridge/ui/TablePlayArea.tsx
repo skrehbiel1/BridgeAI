@@ -10,6 +10,8 @@ import { Seat } from "../core/Seat";
 import { Trick } from "../play/Trick";
 
 import SeatView from "./SeatView";
+import SideDummyHandView
+from "./SideDummyHandView";
 import TableCenter from "./TableCenter";
 
 interface Props {
@@ -18,6 +20,7 @@ interface Props {
     showCompletedTrick: boolean;
     completedTrickWinner?: Seat;
     collectingCompletedTrick: boolean;
+    dummyVisible: boolean;
 }
 
 export default function TablePlayArea({
@@ -25,56 +28,129 @@ export default function TablePlayArea({
     displayedTrick,
     showCompletedTrick,
     completedTrickWinner,
-    collectingCompletedTrick
+    collectingCompletedTrick,
+    dummyVisible
 }: Props) {
+    const westIsDummy =
+        game.isDummy(
+            Seat.West
+        );
+
+    const eastIsDummy =
+        game.isDummy(
+            Seat.East
+        );
+
+    const showWestDummy =
+        dummyVisible &&
+        westIsDummy;
+
+    const showEastDummy =
+        dummyVisible &&
+        eastIsDummy;
+
+    const hasSideDummy =
+        showWestDummy ||
+        showEastDummy;
+
     return (
         <View style={styles.middleRow}>
-            <View style={styles.sideSeat}>
-                <SeatView
-                    name="West"
-                    cardCount={
-                        game.handOf(
-                            Seat.West
-                        ).cards.length
-                    }
-                    orientation="vertical"
-                    active={
-                        !showCompletedTrick &&
-                        game.currentSeat ===
-                            Seat.West
-                    }
-                />
+            <View
+                style={[
+                    styles.sideSeat,
+                    showWestDummy &&
+                        styles.dummySideSeat
+                ]}
+            >
+                {showWestDummy ? (
+                    <SideDummyHandView
+                        seat={Seat.West}
+                        hand={
+                            game.handOf(
+                                Seat.West
+                            )
+                        }
+                        active={
+                            !showCompletedTrick &&
+                            game.currentSeat ===
+                                Seat.West
+                        }
+                    />
+                ) : (
+                    <SeatView
+                        name="West"
+                        cardCount={
+                            game.handOf(
+                                Seat.West
+                            ).cards.length
+                        }
+                        orientation="vertical"
+                        active={
+                            !showCompletedTrick &&
+                            game.currentSeat ===
+                                Seat.West
+                        }
+                    />
+                )}
             </View>
 
-            <View style={styles.centerArea}>
-<TableCenter
-    trick={displayedTrick}
-    winnerSeat={
-        showCompletedTrick
-            ? completedTrickWinner
-            : undefined
-    }
-    collecting={
-        collectingCompletedTrick
-    }
-/>
-            </View>
+<View
+    style={[
+        styles.centerArea,
+        hasSideDummy &&
+            styles.compactCenterArea
+    ]}
+>
+    <TableCenter
+        trick={displayedTrick}
+        winnerSeat={
+            showCompletedTrick
+                ? completedTrickWinner
+                : undefined
+        }
+        collecting={
+            collectingCompletedTrick
+        }
+    />
+</View>
 
-            <View style={styles.sideSeat}>
-                <SeatView
-                    name="East"
-                    cardCount={
-                        game.handOf(
-                            Seat.East
-                        ).cards.length
-                    }
-                    orientation="vertical"
-                    active={
-                        !showCompletedTrick &&
-                        game.currentSeat ===
-                            Seat.East
-                    }
-                />
+            <View
+                style={[
+                    styles.sideSeat,
+                    showEastDummy &&
+                        styles.dummySideSeat
+                ]}
+            >
+                {showEastDummy ? (
+                    <SideDummyHandView
+                        seat={Seat.East}
+                        hand={
+                            game.handOf(
+                                Seat.East
+                            )
+                        }
+                        active={
+                            !showCompletedTrick &&
+                            game.currentSeat ===
+                                Seat.East
+                        }
+                    />
+                ) : (
+                    <SeatView
+                        name="East"
+                        cardCount={
+                            game.handOf(
+                                Seat.East
+                            ).cards.length
+                        }
+                        orientation="vertical"
+                        active={
+                            !showCompletedTrick &&
+                            game.currentSeat ===
+                                Seat.East
+                        }
+                    />
+                )}
             </View>
         </View>
     );
@@ -84,17 +160,22 @@ const styles = StyleSheet.create({
     middleRow: {
         flex: 1,
         width: "100%",
-        minHeight: 175,
+        minHeight: 185,
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between"
+        justifyContent:
+            "space-between"
     },
 
     sideSeat: {
-        width: 72,
+        width: 64,
         alignItems: "center",
         justifyContent: "center",
         zIndex: 2
+    },
+
+    dummySideSeat: {
+        width: 104
     },
 
     centerArea: {
@@ -102,5 +183,12 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "center",
         paddingHorizontal: 2
-    }
+    },
+
+    compactCenterArea: {
+        minWidth: 135,
+        paddingHorizontal: 0
+    },
+
+
 });

@@ -6,8 +6,12 @@ import {
     View
 } from "react-native";
 
+import {
+    Card,
+    Suit
+} from "../cards/Card";
+
 import { Hand } from "../cards/Hand";
-import { Suit } from "../cards/Card";
 
 import HandView from "./HandView";
 
@@ -20,6 +24,8 @@ interface Props {
 
     title?: string;
     isDummy?: boolean;
+
+    suggestedCard?: Card;
 
     onCardPlayed: (
         index: number
@@ -34,15 +40,18 @@ export default function SouthHandView({
     highlightStatus,
     title = "South — You",
     isDummy = false,
+    suggestedCard,
     onCardPlayed
 }: Props) {
     return (
         <View style={styles.container}>
             <View style={styles.heading}>
                 <Text style={styles.title}>
-    			{title}
-    			{isDummy ? " — Dummy" : ""}
-		</Text>
+                    {title}
+                    {isDummy
+                        ? " — Dummy"
+                        : ""}
+                </Text>
 
                 <Text style={styles.cardCount}>
                     {hand.cards.length}{" "}
@@ -66,7 +75,12 @@ export default function SouthHandView({
                 hand={hand}
                 leadSuit={leadSuit}
                 enabled={enabled}
-                onCardPlayed={onCardPlayed}
+                suggestedCard={
+                    suggestedCard
+                }
+                onCardPlayed={
+                    onCardPlayed
+                }
             />
         </View>
     );
@@ -85,7 +99,8 @@ const styles = StyleSheet.create({
         maxWidth: 350,
         flexDirection: "row",
         alignItems: "center",
-        justifyContent: "space-between",
+        justifyContent:
+            "space-between",
         paddingHorizontal: 3,
         marginBottom: 2
     },

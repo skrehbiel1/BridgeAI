@@ -9,18 +9,18 @@ import { Seat } from "../core/Seat";
 import { Suit } from "../cards/Card";
 import { Contract } from "../play/Contract";
 
+import {
+    PlayDecision
+} from "../ai/PlayDecision";
+
 import BridgeTable from "./BridgeTable";
 
-import {PlayDecision} from "../ai/PlayDecision";
-
 const COMPUTER_PLAY_DELAY_MS = 650;
-const COMPLETED_TRICK_DELAY_MS = 1000;
 
 interface Props {
     initialGame?: Game;
     onNewBoard?: () => void;
 }
-
 
 function createGame(): Game {
     return new Game(
@@ -46,38 +46,51 @@ export default function BridgeScreen({
         0
     );
 
-const [
-    playHint,
-    setPlayHint
-] = useState<
-    PlayDecision | null
->(null);
+    const [
+        historyVisible,
+        setHistoryVisible
+    ] = useState(false);
 
-const [
-    historyVisible,
-    setHistoryVisible
-] = useState(false);
+    const [
+        collectingCompletedTrick,
+        setCollectingCompletedTrick
+    ] = useState(false);
 
-const [
-    collectingCompletedTrick,
-    setCollectingCompletedTrick
-] = useState(false);
-
-
- const [
-    game,
-    setGame
-] = useState<Game>(
-    () =>
-        initialGame ??
-        createGame()
-);
+    const [
+        game,
+        setGame
+    ] = useState<Game>(
+        () =>
+            initialGame ??
+            createGame()
+    );
 
     const [
         showCompletedTrick,
         setShowCompletedTrick
     ] = useState(false);
 
+    /*
+     * The suggested card and its explanation.
+     *
+     * playHint remains populated after the modal
+     * closes so the suggested card stays highlighted.
+     */
+    const [
+        playHint,
+        setPlayHint
+    ] = useState<
+        PlayDecision | null
+    >(null);
+
+    const [
+        playHintVisible,
+        setPlayHintVisible
+    ] = useState(false);
+
+    /*
+     * Computer play.
+     */
     useEffect(() => {
         if (
             showCompletedTrick ||
@@ -89,39 +102,40 @@ const [
             return;
         }
 
-        const timer = setTimeout(() => {
-            if (
-                showCompletedTrick ||
-                game.isFinished() ||
-                game.isHumanControlled(
-                    game.currentSeat
-                )
-            ) {
-                return;
-            }
+        const timer =
+            setTimeout(() => {
+                if (
+                    showCompletedTrick ||
+                    game.isFinished() ||
+                    game.isHumanControlled(
+                        game.currentSeat
+                    )
+                ) {
+                    return;
+                }
 
-            const tricksBefore =
-                game.table.totalTricks();
+                const tricksBefore =
+                    game.table.totalTricks();
 
-	    
+                const played =
+                    game.playComputerTurn();
 
-            const played =
-                game.playComputerTurn();
+                if (!played) {
+                    return;
+                }
 
-            if (!played) {
-                return;
-            }
+                const completed =
+                    game.table.totalTricks() >
+                    tricksBefore;
 
-            const completed =
-                game.table.totalTricks() >
-                tricksBefore;
+                if (completed) {
+                    setShowCompletedTrick(
+                        true
+                    );
+                }
 
-            if (completed) {
-                setShowCompletedTrick(true);
-            }
-
-            redraw();
-        }, COMPUTER_PLAY_DELAY_MS);
+                redraw();
+            }, COMPUTER_PLAY_DELAY_MS);
 
         return () => {
             clearTimeout(timer);
@@ -132,36 +146,68 @@ const [
         showCompletedTrick
     ]);
 
-useEffect(() => {
-    if (!showCompletedTrick) {
-        return;
-    }
+    /*
+     * Show a completed trick briefly before
+     * collecting the cards.
+     */
+    useEffect(() => {
+        if (!showCompletedTrick) {
+            return;
+        }
 
-    const collectTimer =
-        setTimeout(() => {
-            setCollectingCompletedTrick(
-                true
+        const collectTimer =
+            setTimeout(() => {
+                setCollectingCompletedTrick(
+                    true
+                );
+            }, 700);
+
+        const clearTimer =
+            setTimeout(() => {
+                setCollectingCompletedTrick(
+                    false
+                );
+
+                setShowCompletedTrick(
+                    false
+                );
+
+                redraw();
+            }, 1050);
+
+        return () => {
+            clearTimeout(
+                collectTimer
             );
-        }, 700);
 
-    const clearTimer =
-        setTimeout(() => {
-            setCollectingCompletedTrick(
+            clearTimeout(
+                clearTimer
+            );
+        };
+    }, [
+        showCompletedTrick
+    ]);
+
+    /*
+     * A hint belongs only to the current human
+     * decision. Clear it when play moves to AI.
+     */
+    useEffect(() => {
+        if (
+            !game.isHumanControlled(
+                game.currentSeat
+            )
+        ) {
+            setPlayHint(null);
+
+            setPlayHintVisible(
                 false
             );
-
-            setShowCompletedTrick(
-                false
-            );
-
-            redraw();
-        }, 1050);
-
-    return () => {
-        clearTimeout(collectTimer);
-        clearTimeout(clearTimer);
-    };
-}, [showCompletedTrick]);
+        }
+    }, [
+        game,
+        renderVersion
+    ]);
 
     function playHumanCard(
         seat: Seat,
@@ -188,7 +234,7 @@ useEffect(() => {
         const tricksBefore =
             game.table.totalTricks();
 
-	game.saveHumanDecisionPoint();
+        game.saveHumanDecisionPoint();
 
         const played =
             game.playCard(
@@ -196,120 +242,163 @@ useEffect(() => {
                 card
             );
 
-	if (!played) {
-    		game.discardLatestUndoPoint();
-    		return;
-	}
+        if (!played) {
+            game.discardLatestUndoPoint();
+            return;
+        }
+
+        /*
+         * The current suggestion is no longer
+         * relevant after a successful play.
+         */
+        setPlayHint(null);
+
+        setPlayHintVisible(
+            false
+        );
 
         const completed =
             game.table.totalTricks() >
             tricksBefore;
 
         if (completed) {
-            setShowCompletedTrick(true);
+            setShowCompletedTrick(
+                true
+            );
         }
 
         redraw();
     }
 
-function showPlayHint(): void {
-    if (
-        showCompletedTrick ||
-        game.isFinished() ||
-        !game.isHumanControlled(
-            game.currentSeat
-        )
-    ) {
-        return;
+    function showPlayHint(): void {
+        if (
+            showCompletedTrick ||
+            game.isFinished() ||
+            !game.isHumanControlled(
+                game.currentSeat
+            )
+        ) {
+            return;
+        }
+
+        const suggestion =
+            game.suggestPlay();
+
+        if (!suggestion) {
+            return;
+        }
+
+        setPlayHint(
+            suggestion
+        );
+
+        setPlayHintVisible(
+            true
+        );
     }
 
-    const suggestion =
-        game.suggestPlay();
+    function undoToMyTurn(): void {
+        if (
+            !game
+                .canUndoToPreviousHumanDecision()
+        ) {
+            return;
+        }
 
-    if (!suggestion) {
-        return;
+        /*
+         * Cancel animations and overlays before
+         * restoring the previous game state.
+         */
+        setShowCompletedTrick(
+            false
+        );
+
+        setCollectingCompletedTrick(
+            false
+        );
+
+        setHistoryVisible(
+            false
+        );
+
+        setPlayHint(null);
+
+        setPlayHintVisible(
+            false
+        );
+
+        const undone =
+            game
+                .undoToPreviousHumanDecision();
+
+        if (!undone) {
+            return;
+        }
+
+        redraw();
     }
 
-    setPlayHint(suggestion);
-}
+    function startNewHand(): void {
+        setShowCompletedTrick(
+            false
+        );
 
-function undoToMyTurn(): void {
-    if (
-        !game
-            .canUndoToPreviousHumanDecision()
-    ) {
-        return;
+        setCollectingCompletedTrick(
+            false
+        );
+
+        setHistoryVisible(
+            false
+        );
+
+        setPlayHint(null);
+
+        setPlayHintVisible(
+            false
+        );
+
+        if (onNewBoard) {
+            onNewBoard();
+            return;
+        }
+
+        setGame(
+            createGame()
+        );
     }
 
-    /*
-     * Cancel completed-trick display and
-     * collection animations before restoring.
-     */
-    setShowCompletedTrick(false);
-
-    setCollectingCompletedTrick(
-        false
-    );
-
-    setHistoryVisible(false);
-
-    const undone =
-        game
-            .undoToPreviousHumanDecision();
-
-    if (!undone) {
-        return;
-    }
-
-    redraw();
-}
-
-
-
-function startNewHand(): void {
-    setShowCompletedTrick(false);
-    setCollectingCompletedTrick(false);
-    setHistoryVisible(false);
-
-    if (onNewBoard) {
-        onNewBoard();
-        return;
-    }
-
-    setGame(createGame());
-}
     const displayedTrick =
         showCompletedTrick &&
         game.lastCompletedTrick
             ? game.lastCompletedTrick
             : game.table.currentTrick;
 
-const dummyVisible =
-    game.openingLeadMade;
+    const dummyVisible =
+        game.openingLeadMade;
 
-const northIsHuman =
-    game.isHumanControlled(
-        Seat.North
-    );
+    const northIsHuman =
+        game.isHumanControlled(
+            Seat.North
+        );
 
-const southIsHuman =
-    game.isHumanControlled(
-        Seat.South
-    );
+    const southIsHuman =
+        game.isHumanControlled(
+            Seat.South
+        );
 
-const northCanPlay =
-    northIsHuman &&
-    !showCompletedTrick &&
-    !game.isFinished() &&
-    game.currentSeat ===
-        Seat.North;
+    const northCanPlay =
+        northIsHuman &&
+        !showCompletedTrick &&
+        !game.isFinished() &&
+        game.currentSeat ===
+            Seat.North;
 
-const southCanPlay =
-    southIsHuman &&
-    !showCompletedTrick &&
-    !game.isFinished() &&
-    game.currentSeat ===
-        Seat.South;
+    const southCanPlay =
+        southIsHuman &&
+        !showCompletedTrick &&
+        !game.isFinished() &&
+        game.currentSeat ===
+            Seat.South;
 
     const statusMessage =
         getStatusMessage(
@@ -321,44 +410,83 @@ const southCanPlay =
 
     const completedTrickWinner =
         showCompletedTrick
-        ? game.trickHistory().at(-1)?.winner
-        : undefined;
+            ? game
+                .trickHistory()
+                .at(-1)
+                ?.winner
+            : undefined;
 
-const canUndo =
-    game.canUndoToPreviousHumanDecision();
+    const canUndo =
+        game
+            .canUndoToPreviousHumanDecision();
 
     return (
-<BridgeTable
-    game={game}
-    displayedTrick={displayedTrick}
-    completedTrickWinner={
-        completedTrickWinner
-    }
-    collectingCompletedTrick={
-        collectingCompletedTrick
-    }
-    dummyVisible={dummyVisible}
-    southCanPlay={southCanPlay}
-    northCanPlay={northCanPlay}
-    statusMessage={statusMessage}
-    showCompletedTrick={showCompletedTrick}
-    historyVisible={historyVisible}
-    canUndo={canUndo}
-    playHint={playHint}
-    onUndo={undoToMyTurn}
-    onShowHint={showPlayHint}
-    onCloseHint={() =>
-        setPlayHint(null)
-    }
-    onShowHistory={() =>
-        setHistoryVisible(true)
-    }
-    onCloseHistory={() =>
-        setHistoryVisible(false)
-    }
-    onPlayHumanCard={playHumanCard}
-    onNewHand={startNewHand}
-/>
+        <BridgeTable
+            game={game}
+            displayedTrick={
+                displayedTrick
+            }
+            completedTrickWinner={
+                completedTrickWinner
+            }
+            collectingCompletedTrick={
+                collectingCompletedTrick
+            }
+            dummyVisible={
+                dummyVisible
+            }
+            southCanPlay={
+                southCanPlay
+            }
+            northCanPlay={
+                northCanPlay
+            }
+            statusMessage={
+                statusMessage
+            }
+            showCompletedTrick={
+                showCompletedTrick
+            }
+            historyVisible={
+                historyVisible
+            }
+            canUndo={
+                canUndo
+            }
+            playHint={
+                playHint
+            }
+            playHintVisible={
+                playHintVisible
+            }
+            onUndo={
+                undoToMyTurn
+            }
+            onShowHint={
+                showPlayHint
+            }
+            onCloseHint={() =>
+                setPlayHintVisible(
+                    false
+                )
+            }
+            onShowHistory={() =>
+                setHistoryVisible(
+                    true
+                )
+            }
+            onCloseHistory={() =>
+                setHistoryVisible(
+                    false
+                )
+            }
+            onPlayHumanCard={
+                playHumanCard
+            }
+            onNewHand={
+                startNewHand
+            }
+        />
     );
 }
 
@@ -383,20 +511,23 @@ function getStatusMessage(
         );
     }
 
-if (southCanPlay) {
-    return game.isDummy(
-        Seat.South
-    )
-        ? "Your turn — play from dummy"
-        : "Your turn — play from South";
-}
+    if (southCanPlay) {
+        return game.isDummy(
+            Seat.South
+        )
+            ? "Your turn — play from dummy"
+            : "Your turn — play from South";
+    }
 
-if (northCanPlay) {
-    return game.isDummy(
-        Seat.North
-    )
-        ? "Your turn — play from dummy"
-        : "Your turn — play from North";
-}
-    return `${game.currentSeat} is playing`;
+    if (northCanPlay) {
+        return game.isDummy(
+            Seat.North
+        )
+            ? "Your turn — play from dummy"
+            : "Your turn — play from North";
+    }
+
+    return (
+        `${game.currentSeat} is playing`
+    );
 }
