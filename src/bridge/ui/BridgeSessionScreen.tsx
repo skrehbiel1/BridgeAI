@@ -39,6 +39,12 @@ import BridgeScreen from "./BridgeScreen";
 import HandView from "./HandView";
 import HintModal from "./HintModal";
 
+import {RubberBridgeScoring, RubberState} from "../scoring/RubberBridgeScoring";
+
+import {
+    ScoringMode
+} from "./WelcomeScreen";
+
 const COMPUTER_BID_DELAY_MS = 650;
 
 type SessionPhase =
@@ -66,7 +72,25 @@ function createSession(): SessionState {
     };
 }
 
-export default function BridgeSessionScreen() {
+interface Props {
+    scoringMode: ScoringMode;
+}
+
+
+export default function BridgeSessionScreen({
+    scoringMode
+}: Props) {
+
+const [
+    rubberState,
+    setRubberState
+] = useState<RubberState>(
+    () =>
+        RubberBridgeScoring
+            .createState()
+);
+
+
     /*
      * Auction and hand objects are mutable.
      * Incrementing this value forces React
@@ -101,6 +125,7 @@ export default function BridgeSessionScreen() {
         game,
         phase
     } = session;
+
 
     /*
      * North, East and West bid automatically.
@@ -286,15 +311,15 @@ export default function BridgeSessionScreen() {
         game
     ) {
         return (
-            <BridgeScreen
-                key={
-                    game.contract.toString()
-                }
-                initialGame={game}
-                onNewBoard={
-                    startNewBoard
-                }
-            />
+<BridgeScreen
+    initialGame={game}
+    onNewBoard={startNewBoard}
+    scoringMode={scoringMode}
+    rubberState={rubberState}
+    onRubberStateChange={
+        setRubberState
+    }
+/>
         );
     }
 

@@ -1,4 +1,6 @@
-import React from "react";
+import React, {
+    useState
+} from "react";
 
 import {
     Pressable,
@@ -32,8 +34,18 @@ import EndOfHandSummary from "./EndOfHandSummary";
 import TrickHistoryView from "./TrickHistoryView";
 import HintModal from "./HintModal";
 
+import {
+    RubberHandResult,
+    RubberState
+} from "../scoring/RubberBridgeScoring";
+
+import {
+    ScoringMode
+} from "./WelcomeScreen";
+
 interface Props {
     game: Game;
+
     displayedTrick: Trick;
 
     dummyVisible: boolean;
@@ -73,10 +85,20 @@ interface Props {
     ) => void;
 
     onNewHand: () => void;
+
+    scoringMode: ScoringMode;
+
+    rubberState: RubberState;
+
+    rubberHandResult:
+        RubberHandResult | null;
 }
 
 export default function BridgeTable({
     game,
+    scoringMode,
+    rubberState,
+    rubberHandResult,
     displayedTrick,
     dummyVisible,
     southCanPlay,
@@ -128,9 +150,13 @@ export default function BridgeTable({
         );
 
     /*
-     * Show North when North is human-controlled,
-     * or when North is dummy and the opening lead
-     * has been made.
+     * Normal North visibility.
+     *
+     * North is visible when:
+     *
+     * 1. North is human controlled, or
+     * 2. North is dummy and the opening
+     *    lead has already been made.
      */
     const showNorthHand =
         northIsHuman ||
@@ -140,8 +166,8 @@ export default function BridgeTable({
         );
 
     /*
-     * Send the suggested card only to the hand
-     * whose turn it currently is.
+     * Suggested card belongs only to
+     * the seat whose turn it currently is.
      */
     const suggestedNorthCard =
         playHint &&
@@ -156,6 +182,21 @@ export default function BridgeTable({
             Seat.South
             ? playHint.card
             : undefined;
+
+    /*
+     * =====================================================
+     * SHOW / HIDE ALL HANDS
+     * =====================================================
+     *
+     * This does NOT affect who controls
+     * the cards.
+     *
+     * It only reveals normally hidden cards.
+     */
+    const [
+        showAllHands,
+        setShowAllHands
+    ] = useState(false);
 
     const hintDisabled =
         game.isFinished() ||
@@ -190,6 +231,18 @@ export default function BridgeTable({
                     }
                 />
 
+                <Text
+                    style={
+                        styles.contractRoles
+                    }
+                >
+                    Declarer:{" "}
+                    {game.declarerSeat()}
+                    {"   "}
+                    Dummy:{" "}
+                    {game.dummySeat()}
+                </Text>
+
                 <TrickHistoryView
                     game={game}
                     visible={
@@ -200,10 +253,17 @@ export default function BridgeTable({
                     }
                 />
 
+                {/*
+                 * =========================================
+                 * ACTION BUTTONS
+                 * =========================================
+                 */}
+
                 <View style={styles.actionRow}>
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Undo to your previous turn"
+                        accessibilityLabel=
+                            "Undo to your previous turn"
                         disabled={
                             !canUndo
                         }
@@ -216,19 +276,23 @@ export default function BridgeTable({
                             styles.actionButton,
 
                             !canUndo &&
-                                styles.disabledActionButton,
+                                styles
+                                    .disabledActionButton,
 
                             pressed &&
                                 canUndo &&
-                                styles.actionButtonPressed
+                                styles
+                                    .actionButtonPressed
                         ]}
                     >
                         <Text
                             style={[
-                                styles.actionButtonText,
+                                styles
+                                    .actionButtonText,
 
                                 !canUndo &&
-                                    styles.disabledActionText
+                                    styles
+                                        .disabledActionText
                             ]}
                         >
                             Undo
@@ -237,7 +301,8 @@ export default function BridgeTable({
 
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Suggest a card to play"
+                        accessibilityLabel=
+                            "Suggest a card to play"
                         disabled={
                             hintDisabled
                         }
@@ -251,20 +316,26 @@ export default function BridgeTable({
                             styles.hintButton,
 
                             hintDisabled &&
-                                styles.disabledActionButton,
+                                styles
+                                    .disabledActionButton,
 
                             pressed &&
                                 !hintDisabled &&
-                                styles.actionButtonPressed
+                                styles
+                                    .actionButtonPressed
                         ]}
                     >
                         <Text
                             style={[
-                                styles.actionButtonText,
-                                styles.hintButtonText,
+                                styles
+                                    .actionButtonText,
+
+                                styles
+                                    .hintButtonText,
 
                                 hintDisabled &&
-                                    styles.disabledActionText
+                                    styles
+                                        .disabledActionText
                             ]}
                         >
                             Hint
@@ -273,7 +344,8 @@ export default function BridgeTable({
 
                     <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel="Open trick history"
+                        accessibilityLabel=
+                            "Open trick history"
                         onPress={
                             onShowHistory
                         }
@@ -283,96 +355,216 @@ export default function BridgeTable({
                             styles.actionButton,
 
                             pressed &&
-                                styles.actionButtonPressed
+                                styles
+                                    .actionButtonPressed
                         ]}
                     >
                         <Text
                             style={
-                                styles.actionButtonText
+                                styles
+                                    .actionButtonText
                             }
                         >
                             History
                         </Text>
                     </Pressable>
+
+                    {/*
+                     * =====================================
+                     * SHOW / HIDE HANDS
+                     * =====================================
+                     */}
+
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={
+                            showAllHands
+                                ? "Hide opponent cards"
+                                : "Show opponent cards"
+                        }
+                        onPress={() =>
+                            setShowAllHands(
+                                current =>
+                                    !current
+                            )
+                        }
+                        style={({
+                            pressed
+                        }) => [
+                            styles.actionButton,
+                            styles.handsButton,
+
+                            showAllHands &&
+                                styles
+                                    .handsButtonActive,
+
+                            pressed &&
+                                styles
+                                    .actionButtonPressed
+                        ]}
+                    >
+                        <Text
+                            style={[
+                                styles
+                                    .actionButtonText,
+
+                                showAllHands &&
+                                    styles
+                                        .handsButtonActiveText
+                            ]}
+                        >
+                            {showAllHands
+                                ? "Hide Hands"
+                                : "Show Hands"}
+                        </Text>
+                    </Pressable>
                 </View>
+
+                {/*
+                 * =========================================
+                 * NORTH
+                 * =========================================
+                 */}
 
                 <NorthArea
                     hand={
                         northHand
                     }
+
+                    /*
+                     * Normal showHand logic is preserved.
+                     *
+                     * showAllHands is passed separately
+                     * so NorthArea can distinguish a
+                     * legitimate dummy from a revealed
+                     * hidden hand.
+                     */
                     showHand={
                         showNorthHand
                     }
+
+                    showAllHands={
+                        showAllHands
+                    }
+
                     isDummy={
                         northIsDummy
                     }
+
                     leadSuit={
                         activeLeadSuit
                     }
+
+                    trump={
+                        game.contract.trump
+                    }
+
                     enabled={
                         northCanPlay
                     }
+
                     active={
                         !showCompletedTrick &&
                         game.currentSeat ===
                             Seat.North
                     }
+
                     suggestedCard={
                         suggestedNorthCard
                     }
+
                     onCardPlayed={
                         onPlayHumanCard
                     }
                 />
 
-<TablePlayArea
-    game={game}
-    displayedTrick={
-        displayedTrick
-    }
-    showCompletedTrick={
-        showCompletedTrick
-    }
-    completedTrickWinner={
-        completedTrickWinner
-    }
-    collectingCompletedTrick={
-        collectingCompletedTrick
-    }
-    dummyVisible={
-        dummyVisible
-    }
-/>
+                {/*
+                 * =========================================
+                 * CENTER TABLE / EAST / WEST
+                 * =========================================
+                 */}
+
+                <TablePlayArea
+                    game={game}
+
+                    displayedTrick={
+                        displayedTrick
+                    }
+
+                    showCompletedTrick={
+                        showCompletedTrick
+                    }
+
+                    completedTrickWinner={
+                        completedTrickWinner
+                    }
+
+                    collectingCompletedTrick={
+                        collectingCompletedTrick
+                    }
+
+                    dummyVisible={
+                        dummyVisible
+                    }
+
+                    /*
+                     * NEW:
+                     * TablePlayArea will reveal East
+                     * and West when this is true.
+                     */
+                    showAllHands={
+                        showAllHands
+                    }
+                />
+
+                {/*
+                 * =========================================
+                 * SOUTH
+                 * =========================================
+                 */}
+
                 <SouthHandView
                     hand={
                         southHand
                     }
+
                     leadSuit={
                         activeLeadSuit
                     }
+
                     enabled={
                         southCanPlay
                     }
+
                     statusMessage={
                         statusMessage
                     }
+
                     highlightStatus={
                         southCanPlay ||
                         northCanPlay
                     }
+
                     title={
                         southIsDummy &&
                         dummyVisible
                             ? "South"
                             : "South — You"
                     }
+
                     isDummy={
                         southIsDummy &&
                         dummyVisible
                     }
+
                     suggestedCard={
                         suggestedSouthCard
                     }
+
+                    trump={
+                        game.contract.trump
+                    }
+
                     onCardPlayed={
                         index =>
                             onPlayHumanCard(
@@ -382,48 +574,87 @@ export default function BridgeTable({
                     }
                 />
 
+                {/*
+                 * =========================================
+                 * END OF HAND / SCORING
+                 * =========================================
+                 */}
+
                 {game.isFinished() && (
                     <EndOfHandSummary
-                        game={game}
+                        game={
+                            game
+                        }
+
+                        scoringMode={
+                            scoringMode
+                        }
+
+                        rubberState={
+                            rubberState
+                        }
+
+                        rubberHandResult={
+                            rubberHandResult
+                        }
+
                         onNewHand={
                             onNewHand
                         }
                     />
                 )}
 
+                {/*
+                 * =========================================
+                 * PLAY HINT
+                 * =========================================
+                 */}
+
                 {playHint && (
                     <HintModal
                         visible={
                             playHintVisible
                         }
-                        heading="Suggested play"
+
+                        heading=
+                            "Suggested play"
+
                         recommendation={
                             `${displayRank(
-                                playHint.card.rank
+                                playHint
+                                    .card
+                                    .rank
                             )}${suitSymbol(
-                                playHint.card.suit
+                                playHint
+                                    .card
+                                    .suit
                             )}`
                         }
+
                         rule={
                             playHint
                                 .explanation
                                 .rule
                         }
+
                         summary={
                             playHint
                                 .explanation
                                 .summary
                         }
+
                         facts={
                             playHint
                                 .explanation
                                 .facts
                         }
+
                         alternatives={
                             playHint
                                 .explanation
                                 .alternatives
                         }
+
                         onClose={
                             onCloseHint
                         }
@@ -455,35 +686,57 @@ function displayRank(
     }
 }
 
-const styles = StyleSheet.create({
+const styles =
+StyleSheet.create({
     safeArea: {
         flex: 1,
-        backgroundColor: "#145A32"
+        backgroundColor:
+            "#145A32"
     },
 
     container: {
         flex: 1,
         position: "relative",
-        backgroundColor: "#1B7040",
+        backgroundColor:
+            "#1B7040",
         paddingTop: 6,
         paddingHorizontal: 8,
         paddingBottom: 8
     },
 
+    contractRoles: {
+        color: "#E8F5E9",
+        fontSize: 12,
+        fontWeight: "700",
+        textAlign: "center",
+        marginTop: 2,
+        includeFontPadding: false
+    },
+
+    /*
+     * Four buttons may not fit on one
+     * row on a smaller iPhone.
+     *
+     * flexWrap allows the Hands button
+     * to drop cleanly to a second row.
+     */
     actionRow: {
         flexDirection: "row",
+        flexWrap: "wrap",
         justifyContent: "center",
         gap: 7,
-        marginTop: 6
+        marginTop: 6,
+        marginBottom: 4
     },
 
     actionButton: {
-        flex: 1,
-        maxWidth: 105,
+        minWidth: 82,
         minHeight: 40,
-        backgroundColor: "#FFFFFF",
+        backgroundColor:
+            "#FFFFFF",
         borderWidth: 2,
-        borderColor: "#D7E8DB",
+        borderColor:
+            "#D7E8DB",
         borderRadius: 9,
         alignItems: "center",
         justifyContent: "center",
@@ -491,12 +744,42 @@ const styles = StyleSheet.create({
     },
 
     hintButton: {
-        backgroundColor: "#E8F5E9",
-        borderColor: "#66A96F"
+        backgroundColor:
+            "#E8F5E9",
+        borderColor:
+            "#66A96F"
+    },
+
+    /*
+     * Show Hands button is slightly
+     * different so it is easy to find.
+     */
+    handsButton: {
+        backgroundColor:
+            "#FFFDE7",
+        borderColor:
+            "#D6B638"
+    },
+
+    /*
+     * When cards are revealed, make the
+     * button yellow so it is obvious that
+     * Show Hands mode is active.
+     */
+    handsButtonActive: {
+        backgroundColor:
+            "#FFEB3B",
+        borderColor:
+            "#F9A825"
+    },
+
+    handsButtonActiveText: {
+        color: "#1B1B1B"
     },
 
     actionButtonPressed: {
         opacity: 0.75,
+
         transform: [
             {
                 scale: 0.97
@@ -516,8 +799,10 @@ const styles = StyleSheet.create({
     },
 
     disabledActionButton: {
-        backgroundColor: "#D8DDD9",
-        borderColor: "#C5CBC6"
+        backgroundColor:
+            "#D8DDD9",
+        borderColor:
+            "#C5CBC6"
     },
 
     disabledActionText: {

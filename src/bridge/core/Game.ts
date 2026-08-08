@@ -30,6 +30,8 @@ import { DefenseAI } from "../ai/DefenseAI";
 
 import { DeclarerAI } from "../ai/DeclarerAI";
 
+import {BridgeScoring, ScoreResult} from "../scoring/BridgeScoring";
+
 export interface TrickTotals {NS: number;EW: number;}
 
 interface GameSnapshot {hands: Record<Seat, Card[]>;
@@ -445,6 +447,20 @@ contractMade(): boolean {
     return (
         this.contractTricksWon() >=
         this.contract.requiredTricks()
+    );
+}
+
+score(
+    vulnerable = false
+): ScoreResult | undefined {
+    if (!this.isFinished()) {
+        return undefined;
+    }
+
+    return BridgeScoring.score(
+        this.contract,
+        this.contractTricksWon(),
+        vulnerable
     );
 }
 

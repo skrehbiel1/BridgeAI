@@ -20,6 +20,40 @@ interface Props {
     onClose: () => void;
 }
 
+function formatRecommendation(
+    recommendation: string
+): string {
+    return recommendation
+        .replace(/S\b/g, "♠")
+        .replace(/H\b/g, "♥")
+        .replace(/D\b/g, "♦")
+        .replace(/C\b/g, "♣");
+}
+
+function recommendationColor(
+    recommendation: string
+): string {
+    const formatted =
+        formatRecommendation(
+            recommendation
+        );
+
+    if (
+        formatted.includes("♥") ||
+        formatted.includes("♦")
+    ) {
+        return "#C62828";
+    }
+
+    if (
+        formatted.includes("♠") ||
+        formatted.includes("♣")
+    ) {
+        return "#151515";
+    }
+
+    return "#173A26";
+}
 export default function HintModal({
     visible,
     heading,
@@ -45,9 +79,21 @@ export default function HintModal({
                                 {heading}
                             </Text>
 
-                            <Text style={styles.recommendation}>
-                                {recommendation}
-                            </Text>
+<Text
+    style={[
+        styles.recommendation,
+        {
+            color:
+                recommendationColor(
+                    recommendation
+                )
+        }
+    ]}
+>
+    {formatRecommendation(
+        recommendation
+    )}
+</Text>
                         </View>
 
                         <Pressable

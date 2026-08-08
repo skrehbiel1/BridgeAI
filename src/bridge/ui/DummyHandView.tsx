@@ -15,13 +15,15 @@ import { Hand } from "../cards/Hand";
 
 import HandView from "./HandView";
 
+import {TrumpSuit} from "../play/Contract";
+
 interface Props {
     hand: Hand;
     leadSuit?: Suit;
     enabled: boolean;
 
     suggestedCard?: Card;
-
+    trump: TrumpSuit;
     onCardPlayed: (
         index: number
     ) => void;
@@ -32,6 +34,7 @@ export default function DummyHandView({
     leadSuit,
     enabled,
     suggestedCard,
+    trump,
     onCardPlayed
 }: Props) {
     return (
@@ -49,17 +52,14 @@ export default function DummyHandView({
                 </Text>
             </View>
 
-            <HandView
-                hand={hand}
-                leadSuit={leadSuit}
-                enabled={enabled}
-                suggestedCard={
-                    suggestedCard
-                }
-                onCardPlayed={
-                    onCardPlayed
-                }
-            />
+<HandView
+    hand={hand}
+    leadSuit={leadSuit}
+    enabled={enabled}
+    suggestedCard={suggestedCard}
+    trump={trump}
+    onCardPlayed={onCardPlayed}
+/>
         </View>
     );
 }

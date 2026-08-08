@@ -15,13 +15,15 @@ import { Hand } from "../cards/Hand";
 
 import HandView from "./HandView";
 
+import {TrumpSuit} from "../play/Contract";
+
 interface Props {
     hand: Hand;
     leadSuit?: Suit;
     enabled: boolean;
     statusMessage: string;
     highlightStatus: boolean;
-
+    trump: TrumpSuit;
     title?: string;
     isDummy?: boolean;
 
@@ -38,6 +40,7 @@ export default function SouthHandView({
     enabled,
     statusMessage,
     highlightStatus,
+    trump,
     title = "South — You",
     isDummy = false,
     suggestedCard,
@@ -71,17 +74,14 @@ export default function SouthHandView({
                 {statusMessage}
             </Text>
 
-            <HandView
-                hand={hand}
-                leadSuit={leadSuit}
-                enabled={enabled}
-                suggestedCard={
-                    suggestedCard
-                }
-                onCardPlayed={
-                    onCardPlayed
-                }
-            />
+<HandView
+    hand={hand}
+    leadSuit={leadSuit}
+    enabled={enabled}
+    suggestedCard={suggestedCard}
+    trump={trump}
+    onCardPlayed={onCardPlayed}
+/>
         </View>
     );
 }

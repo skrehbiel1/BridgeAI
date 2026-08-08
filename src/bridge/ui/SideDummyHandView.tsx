@@ -7,12 +7,15 @@ import {
 } from "react-native";
 
 import {
-    Card,
     Suit
 } from "../cards/Card";
 
 import { Hand } from "../cards/Hand";
 import { Seat } from "../core/Seat";
+
+import {
+    TrumpSuit
+} from "../play/Contract";
 
 import {
     suitSymbol
@@ -22,96 +25,174 @@ interface Props {
     seat: Seat;
     hand: Hand;
     active: boolean;
-}
+    trump: TrumpSuit;
 
-const SUIT_ORDER: Suit[] = [
-    Suit.Spades,
-    Suit.Hearts,
-    Suit.Diamonds,
-    Suit.Clubs
-];
+    /*
+     * Optional custom heading.
+     *
+     * Examples:
+     * "West — Dummy"
+     * "West — Declarer"
+     * "East — Defender"
+     *
+     * If omitted, the normal
+     * "<seat> — Dummy" label is used.
+     */
+    title?: string;
+}
 
 export default function SideDummyHandView({
     seat,
     hand,
-    active
+    active,
+    trump,
+    title
 }: Props) {
+    const orderedSuits =
+        suitOrder(trump);
+
     return (
         <View
             style={[
                 styles.container,
+
                 active &&
                     styles.activeContainer
             ]}
         >
             <Text style={styles.title}>
-                {seat}
+                {
+                    title ??
+                    `${seat} — Dummy`
+                }
             </Text>
 
-            <Text style={styles.subtitle}>
-                Dummy
-            </Text>
+            {orderedSuits.map(
+                suit => {
+                    const cards =
+                        hand.cards.filter(
+                            card =>
+                                card.suit ===
+                                    suit
+                        );
 
-            {SUIT_ORDER.map(suit => {
-                const cards =
-                    hand.cards.filter(
-                        card =>
-                            card.suit === suit
+                    return (
+                        <View
+                            key={suit}
+                            style={
+                                styles.suitRow
+                            }
+                        >
+                            <Text
+                                style={[
+                                    styles.suitSymbol,
+
+                                    {
+                                        color:
+                                            suitColor(
+                                                suit
+                                            )
+                                    }
+                                ]}
+                            >
+                                {suitSymbol(
+                                    suit
+                                )}
+                            </Text>
+
+                            <Text
+                                style={[
+                                    styles.ranks,
+
+                                    {
+                                        color:
+                                            suitColor(
+                                                suit
+                                            )
+                                    }
+                                ]}
+                                numberOfLines={
+                                    2
+                                }
+                            >
+                                {
+                                    cards.length >
+                                    0
+                                        ? cards
+                                            .map(
+                                                card =>
+                                                    displayRank(
+                                                        card.rank
+                                                    )
+                                            )
+                                            .join(
+                                                " "
+                                            )
+
+                                        : "—"
+                                }
+                            </Text>
+                        </View>
                     );
+                }
+            )}
 
-                return (
-                    <View
-                        key={suit}
-                        style={styles.suitRow}
-                    >
-                        <Text
-                            style={[
-                                styles.suitSymbol,
-                                {
-                                    color:
-                                        suitColor(
-                                            suit
-                                        )
-                                }
-                            ]}
-                        >
-                            {suitSymbol(suit)}
-                        </Text>
-
-                        <Text
-                            style={[
-                                styles.ranks,
-                                {
-                                    color:
-                                        suitColor(
-                                            suit
-                                        )
-                                }
-                            ]}
-                            numberOfLines={2}
-                        >
-                            {cards.length > 0
-                                ? cards
-                                    .map(card =>
-                                        displayRank(
-                                            card.rank
-                                        )
-                                    )
-                                    .join(" ")
-                                : "—"}
-                        </Text>
-                    </View>
-                );
-            })}
-
-            <Text style={styles.cardCount}>
+            <Text
+                style={
+                    styles.cardCount
+                }
+            >
                 {hand.cards.length}{" "}
+
                 {hand.cards.length === 1
                     ? "card"
                     : "cards"}
             </Text>
         </View>
     );
+}
+
+function suitOrder(
+    trump: TrumpSuit
+): Suit[] {
+    const standardOrder:
+        Suit[] = [
+        Suit.Spades,
+        Suit.Hearts,
+        Suit.Diamonds,
+        Suit.Clubs
+    ];
+
+    /*
+     * No Trump:
+     *
+     * Spades
+     * Hearts
+     * Diamonds
+     * Clubs
+     */
+    if (
+        trump === "NT"
+    ) {
+        return standardOrder;
+    }
+
+    /*
+     * Suit contract:
+     *
+     * show trump first.
+     *
+     * The remaining suits stay in
+     * normal bridge display order.
+     */
+    return [
+        trump,
+
+        ...standardOrder.filter(
+            suit =>
+                suit !== trump
+        )
+    ];
 }
 
 function displayRank(
@@ -134,7 +215,9 @@ function displayRank(
             return "10";
 
         default:
-            return String(rank);
+            return String(
+                rank
+            );
     }
 }
 
@@ -142,8 +225,10 @@ function suitColor(
     suit: Suit
 ): string {
     if (
-        suit === Suit.Hearts ||
-        suit === Suit.Diamonds
+        suit ===
+            Suit.Hearts ||
+        suit ===
+            Suit.Diamonds
     ) {
         return "#C62828";
     }
@@ -151,23 +236,36 @@ function suitColor(
     return "#151515";
 }
 
-const styles = StyleSheet.create({
+const styles =
+StyleSheet.create({
     container: {
-        width: 102,
+        width: 90,
         minHeight: 178,
-        backgroundColor: "#FFFFFF",
+
+        backgroundColor:
+            "#FFFFFF",
+
         borderWidth: 2,
-        borderColor: "#D0D0D0",
+        borderColor:
+            "#D0D0D0",
+
         borderRadius: 10,
+
         paddingHorizontal: 5,
         paddingTop: 6,
         paddingBottom: 5,
 
         elevation: 4,
 
-        shadowColor: "#000000",
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        shadowColor:
+            "#000000",
+
+        shadowOpacity:
+            0.2,
+
+        shadowRadius:
+            4,
+
         shadowOffset: {
             width: 0,
             height: 2
@@ -175,58 +273,97 @@ const styles = StyleSheet.create({
     },
 
     activeContainer: {
-        borderColor: "#FFEB3B",
+        borderColor:
+            "#FFEB3B",
+
         borderWidth: 3,
-        backgroundColor: "#FFFDE7"
+
+        backgroundColor:
+            "#FFFDE7"
     },
 
     title: {
-        color: "#173A26",
-        fontSize: 14,
-        fontWeight: "900",
-        textAlign: "center",
-        includeFontPadding: false
-    },
+        color:
+            "#173A26",
 
-    subtitle: {
-        color: "#5B6A5E",
-        fontSize: 11,
-        fontWeight: "800",
-        textAlign: "center",
-        marginBottom: 4,
-        includeFontPadding: false
+        fontSize: 12,
+
+        fontWeight:
+            "900",
+
+        textAlign:
+            "center",
+
+        marginBottom:
+            5,
+
+        includeFontPadding:
+            false
     },
 
     suitRow: {
         minHeight: 29,
-        flexDirection: "row",
-        alignItems: "flex-start"
+
+        flexDirection:
+            "row",
+
+        alignItems:
+            "flex-start"
     },
 
     suitSymbol: {
         width: 23,
+
         fontSize: 20,
-        fontWeight: "900",
-        lineHeight: 24,
-        textAlign: "center",
-        includeFontPadding: false
+
+        fontWeight:
+            "900",
+
+        lineHeight:
+            24,
+
+        textAlign:
+            "center",
+
+        includeFontPadding:
+            false
     },
 
     ranks: {
         flex: 1,
-        fontSize: 13,
-        fontWeight: "800",
-        lineHeight: 17,
-        paddingTop: 3,
-        includeFontPadding: false
+
+        fontSize: 12,
+
+        fontWeight:
+            "800",
+
+        lineHeight:
+            16,
+
+        paddingTop:
+            3,
+
+        includeFontPadding:
+            false
     },
 
     cardCount: {
-        color: "#777777",
-        fontSize: 10,
-        fontWeight: "700",
-        textAlign: "center",
-        marginTop: 3,
-        includeFontPadding: false
+        color:
+            "#777777",
+
+        fontSize:
+            10,
+
+        fontWeight:
+            "700",
+
+        textAlign:
+            "center",
+
+        marginTop:
+            3,
+
+        includeFontPadding:
+            false
     }
 });

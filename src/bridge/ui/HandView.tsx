@@ -16,6 +16,8 @@ import {
     Suit
 } from "../cards/Card";
 
+import {TrumpSuit} from "../play/Contract";
+
 import { Hand } from "../cards/Hand";
 import { suitSymbol } from "../cards/SuitDisplay";
 
@@ -25,7 +27,7 @@ interface Props {
     enabled?: boolean;
 
     suggestedCard?: Card;
-
+    trump?: TrumpSuit;
     onCardPlayed?: (
         index: number
     ) => void;
@@ -51,13 +53,39 @@ interface RankButtonProps {
     onPress: () => void;
 }
 
-const SUIT_ORDER: Suit[] = [
-    Suit.Spades,
-    Suit.Hearts,
-    Suit.Diamonds,
-    Suit.Clubs
-];
+function suitOrder(
+    trump?: TrumpSuit
+): Suit[] {
+    const standardOrder: Suit[] = [
+        Suit.Spades,
+        Suit.Hearts,
+        Suit.Diamonds,
+        Suit.Clubs
+    ];
 
+    /*
+     * No Trump uses the normal
+     * Spades-Hearts-Diamonds-Clubs order.
+     */
+    if (
+        trump === undefined ||
+        trump === "NT"
+    ) {
+        return standardOrder;
+    }
+
+    /*
+     * Put trump first, followed by the
+     * remaining suits in normal order.
+     */
+    return [
+        trump,
+        ...standardOrder.filter(
+            suit =>
+                suit !== trump
+        )
+    ];
+}
 function displayRank(
     rank: number
 ): string {
@@ -244,19 +272,17 @@ function RankButton({
                         styles.pressedButton
                 ]}
             >
-                <Text
-                    style={[
-                        styles.rankText,
-                        {
-                            color:
-                                legal
-                                    ? suitColor(
-                                        card.suit
-                                    )
-                                    : "#C7C7C7"
-                        }
-                    ]}
-                >
+<Text
+    style={[
+        styles.rankText,
+        {
+            color:
+                suitColor(
+                    card.suit
+                )
+        }
+    ]}
+>
                     {displayRank(
                         card.rank
                     )}
@@ -375,11 +401,15 @@ export default function HandView({
     leadSuit,
     enabled = true,
     suggestedCard,
+    trump,
     onCardPlayed
 }: Props) {
+    const orderedSuits =
+        suitOrder(trump);
+
     return (
         <View style={styles.container}>
-            {SUIT_ORDER.map(suit => (
+            {orderedSuits.map(suit => (
                 <SuitRow
                     key={suit}
                     suit={suit}
@@ -440,14 +470,14 @@ const styles = StyleSheet.create({
         flexWrap: "wrap"
     },
 
-    rankButtonWrapper: {
-        minWidth: 36,
-        height: 34,
-        marginRight: 2,
-        borderRadius: 7,
-        borderWidth: 2,
-        borderColor: "transparent"
-    },
+rankButtonWrapper: {
+    minWidth: 38,
+    height: 35,
+    marginRight: 3,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: "transparent"
+},
 
     rankButton: {
         flex: 1,
@@ -475,12 +505,12 @@ const styles = StyleSheet.create({
         ]
     },
 
-    rankText: {
-        fontSize: 19,
-        fontWeight: "800",
-        lineHeight: 23,
-        includeFontPadding: false
-    },
+rankText: {
+    fontSize: 21,
+    fontWeight: "900",
+    lineHeight: 25,
+    includeFontPadding: false
+},
 
     hintBadge: {
         position: "absolute",

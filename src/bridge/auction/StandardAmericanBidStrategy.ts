@@ -49,7 +49,9 @@ implements BidStrategy {
             );
 
         /*
-         * 1. Opening bid
+         * =====================================================
+         * 1. OPENING BID
+         * =====================================================
          */
         if (!auction.lastContract()) {
             return this.chooseOpeningBid(
@@ -71,10 +73,11 @@ implements BidStrategy {
         }
 
         /*
-         * 2. Competitive auction
+         * =====================================================
+         * 2. COMPETITIVE AUCTION
+         * =====================================================
          *
-         * The opponents currently own the
-         * contract.
+         * The opponents currently own the contract.
          */
         if (
             this.opponentsOwnContract(
@@ -89,7 +92,9 @@ implements BidStrategy {
         }
 
         /*
-         * 3. Response to partner
+         * =====================================================
+         * 3. FIRST RESPONSE TO PARTNER
+         * =====================================================
          */
         if (
             this.isRespondingToPartner(
@@ -104,7 +109,36 @@ implements BidStrategy {
         }
 
         /*
-         * 4. Opener's rebid
+         * =====================================================
+         * 4. STAYMAN RESPONDER CONTINUATION
+         * =====================================================
+         *
+         * This check MUST occur before the generic
+         * opener-rebid check.
+         *
+         * After:
+         *
+         * 1NT - 2C
+         * 2D/H/S - ?
+         *
+         * the responder has already made a contract
+         * bid, so the generic auction helpers can
+         * otherwise mistake this for an opener rebid.
+         */
+        const staymanContinuation =
+            this.chooseStaymanContinuation(
+                auction,
+                evaluation
+            );
+
+        if (staymanContinuation) {
+            return staymanContinuation;
+        }
+
+        /*
+         * =====================================================
+         * 5. OPENER'S REBID
+         * =====================================================
          */
         if (
             this.isOpenerRebid(
@@ -118,6 +152,11 @@ implements BidStrategy {
             );
         }
 
+        /*
+         * =====================================================
+         * 6. GENERAL CONTINUATION
+         * =====================================================
+         */
         return this.chooseGeneralContinuation(
             hand,
             auction,
@@ -126,9 +165,9 @@ implements BidStrategy {
     }
 
     /*
-     * =====================================================
+     * =========================================================
      * OPENING BIDS
-     * =====================================================
+     * =========================================================
      */
 
     private chooseOpeningBid(
@@ -220,147 +259,153 @@ implements BidStrategy {
     }
 
     /*
-     * =====================================================
+     * =========================================================
      * RESPONSES
-     * =====================================================
+     * =========================================================
      */
 
-private chooseResponse(
-    hand: Hand,
-    auction: Auction,
-    evaluation: HandEvaluation
-): Bid {
-    const partnerCall =
-        this.partnerLastContractCall(
-            auction
-        );
+    private chooseResponse(
+        hand: Hand,
+        auction: Auction,
+        evaluation: HandEvaluation
+    ): Bid {
+        const partnerCall =
+            this.partnerLastContractCall(
+                auction
+            );
 
-    if (!partnerCall) {
-        return Bid.Pass();
-    }
+        if (!partnerCall) {
+            return Bid.Pass();
+        }
 
-    const partnerLevel =
-        partnerCall.bid.level;
+        const partnerLevel =
+            partnerCall.bid.level;
 
-    const partnerSuit =
-        partnerCall.bid.suit;
+        const partnerSuit =
+            partnerCall.bid.suit;
 
-    if (
-        partnerLevel === undefined ||
-        partnerSuit === undefined
-    ) {
-        return Bid.Pass();
-    }
+        if (
+            partnerLevel === undefined ||
+            partnerSuit === undefined
+        ) {
+            return Bid.Pass();
+        }
 
-    /*
-     * Responses to 1NT:
-     *
-     * 2♣ = Stayman
-     * 2♦ = transfer to hearts
-     * 2♥ = transfer to spades
-     */
-    if (
-        partnerLevel === 1 &&
-        partnerSuit === "NT"
-    ) {
-        return this.chooseOneNotrumpResponse(
-            auction,
-            evaluation
-        );
-    }
-
-    const hcp =
-        evaluation.highCardPoints;
-
-    if (hcp < 6) {
-        return Bid.Pass();
-    }
-
-    /*
-     * Raise partner with at least
-     * three-card support.
-     */
-    if (partnerSuit !== "NT") {
-        const supportLength =
-            evaluation.lengths[
-                partnerSuit
-            ];
-
-        if (supportLength >= 3) {
-            return this.chooseRaise(
+        /*
+         * Responses to 1NT:
+         *
+         * 2C = Stayman
+         * 2D = transfer to hearts
+         * 2H = transfer to spades
+         */
+        if (
+            partnerLevel === 1 &&
+            partnerSuit === "NT"
+        ) {
+            return this.chooseOneNotrumpResponse(
                 auction,
-                partnerLevel,
-                partnerSuit,
-                hcp
+                evaluation
             );
         }
-    }
 
-    /*
-     * Bid a new four-card major.
-     */
-    const majorResponse =
-        this.chooseNewMajorResponse(
-            auction,
-            evaluation
-        );
+        const hcp =
+            evaluation.highCardPoints;
 
-    if (majorResponse) {
-        return majorResponse;
-    }
+        if (hcp < 6) {
+            return Bid.Pass();
+        }
 
-    /*
-     * Bid another useful four-card suit.
-     */
-    const newSuit =
-        this.chooseNewSuitResponse(
-            auction,
-            evaluation
-        );
+        /*
+         * Raise partner with at least
+         * three-card support.
+         */
+        if (partnerSuit !== "NT") {
+            const supportLength =
+                evaluation.lengths[
+                    partnerSuit
+                ];
 
-    if (newSuit) {
-        return newSuit;
-    }
-
-    /*
-     * Balanced responses.
-     */
-    if (evaluation.balanced) {
-        if (hcp >= 10) {
-            const threeNotrump =
-                Bid.Contract(
-                    3,
-                    "NT"
+            if (supportLength >= 3) {
+                return this.chooseRaise(
+                    auction,
+                    partnerLevel,
+                    partnerSuit,
+                    hcp
                 );
-
-            if (
-                auction.isLegalBid(
-                    threeNotrump
-                )
-            ) {
-                return threeNotrump;
             }
         }
 
-        if (hcp >= 6) {
-            const oneNotrump =
-                Bid.Contract(
-                    1,
-                    "NT"
-                );
+        /*
+         * Bid a new four-card major.
+         */
+        const majorResponse =
+            this.chooseNewMajorResponse(
+                auction,
+                evaluation
+            );
 
-            if (
-                auction.isLegalBid(
-                    oneNotrump
-                )
-            ) {
-                return oneNotrump;
+        if (majorResponse) {
+            return majorResponse;
+        }
+
+        /*
+         * Bid another useful four-card suit.
+         */
+        const newSuit =
+            this.chooseNewSuitResponse(
+                auction,
+                evaluation
+            );
+
+        if (newSuit) {
+            return newSuit;
+        }
+
+        /*
+         * Balanced responses.
+         */
+        if (evaluation.balanced) {
+            if (hcp >= 10) {
+                const threeNotrump =
+                    Bid.Contract(
+                        3,
+                        "NT"
+                    );
+
+                if (
+                    auction.isLegalBid(
+                        threeNotrump
+                    )
+                ) {
+                    return threeNotrump;
+                }
+            }
+
+            if (hcp >= 6) {
+                const oneNotrump =
+                    Bid.Contract(
+                        1,
+                        "NT"
+                    );
+
+                if (
+                    auction.isLegalBid(
+                        oneNotrump
+                    )
+                ) {
+                    return oneNotrump;
+                }
             }
         }
+
+        return Bid.Pass();
     }
 
-    return Bid.Pass();
-}
+    /*
+     * =========================================================
+     * RESPONSES TO 1NT
+     * =========================================================
+     */
 
     private chooseOneNotrumpResponse(
         auction: Auction,
@@ -381,6 +426,9 @@ private chooseResponse(
 
         /*
          * Jacoby transfer to hearts.
+         *
+         * Five or more hearts:
+         * responder bids 2D.
          */
         if (hearts >= 5) {
             return this.contractOrPass(
@@ -392,6 +440,9 @@ private chooseResponse(
 
         /*
          * Jacoby transfer to spades.
+         *
+         * Five or more spades:
+         * responder bids 2H.
          */
         if (spades >= 5) {
             return this.contractOrPass(
@@ -402,8 +453,8 @@ private chooseResponse(
         }
 
         /*
-         * Stayman with an invitational or
-         * better hand and a four-card major.
+         * Stayman with invitational or
+         * better strength and a four-card major.
          */
         if (
             hcp >= 8 &&
@@ -458,7 +509,8 @@ private chooseResponse(
         highCardPoints: number
     ): Bid {
         /*
-         * Simple raise: approximately 6–9 HCP.
+         * Simple raise: approximately
+         * 6–9 HCP.
          */
         if (
             highCardPoints >= 6 &&
@@ -475,8 +527,8 @@ private chooseResponse(
         }
 
         /*
-         * Invitational raise: approximately
-         * 10–12 HCP.
+         * Invitational raise:
+         * approximately 10–12 HCP.
          */
         if (
             highCardPoints >= 10 &&
@@ -591,9 +643,259 @@ private chooseResponse(
     }
 
     /*
-     * =====================================================
+     * =========================================================
+     * STAYMAN — RESPONDER'S SECOND BID
+     * =========================================================
+     */
+
+    private chooseStaymanContinuation(
+        auction: Auction,
+        evaluation: HandEvaluation
+    ): Bid | undefined {
+        const currentSeat =
+            auction.currentSeat;
+
+        const partner =
+            this.partnerOf(
+                currentSeat
+            );
+
+        const myContractCalls =
+            auction.calls.filter(
+                call =>
+                    call.seat ===
+                        currentSeat &&
+                    call.bid.isContract()
+            );
+
+        const partnerContractCalls =
+            auction.calls.filter(
+                call =>
+                    call.seat === partner &&
+                    call.bid.isContract()
+            );
+
+        /*
+         * Responder must previously have
+         * bid 2C Stayman.
+         */
+        const staymanCall =
+            myContractCalls.find(
+                call =>
+                    call.bid.level === 2 &&
+                    call.bid.suit ===
+                        Suit.Clubs
+            );
+
+        if (!staymanCall) {
+            return undefined;
+        }
+
+        /*
+         * Partner must previously have opened 1NT.
+         */
+        const oneNotrumpOpening =
+            partnerContractCalls.find(
+                call =>
+                    call.bid.level === 1 &&
+                    call.bid.suit ===
+                        "NT"
+            );
+
+        if (!oneNotrumpOpening) {
+            return undefined;
+        }
+
+        /*
+         * Partner's latest contract call should
+         * now be the response to Stayman.
+         */
+        const openerResponse =
+            partnerContractCalls[
+                partnerContractCalls.length -
+                1
+            ];
+
+        if (
+            !openerResponse ||
+            openerResponse.bid.level !== 2 ||
+            openerResponse.bid.suit ===
+                undefined
+        ) {
+            return undefined;
+        }
+
+        const responseSuit =
+            openerResponse.bid.suit;
+
+        if (
+            responseSuit !==
+                Suit.Diamonds &&
+            responseSuit !==
+                Suit.Hearts &&
+            responseSuit !==
+                Suit.Spades
+        ) {
+            return undefined;
+        }
+
+        const hcp =
+            evaluation.highCardPoints;
+
+        const hearts =
+            evaluation.lengths[
+                Suit.Hearts
+            ];
+
+        const spades =
+            evaluation.lengths[
+                Suit.Spades
+            ];
+
+        /*
+         * -----------------------------------------------------
+         * Opener responded 2H.
+         * -----------------------------------------------------
+         */
+        if (
+            responseSuit ===
+            Suit.Hearts
+        ) {
+            /*
+             * We have a heart fit.
+             */
+            if (hearts >= 4) {
+                /*
+                 * Game-going values.
+                 */
+                if (hcp >= 10) {
+                    return this.contractOrPass(
+                        auction,
+                        4,
+                        Suit.Hearts
+                    );
+                }
+
+                /*
+                 * Invitational values.
+                 */
+                if (hcp >= 8) {
+                    return this.contractOrPass(
+                        auction,
+                        3,
+                        Suit.Hearts
+                    );
+                }
+
+                return Bid.Pass();
+            }
+
+            /*
+             * No heart fit.
+             */
+            if (hcp >= 10) {
+                return this.contractOrPass(
+                    auction,
+                    3,
+                    "NT"
+                );
+            }
+
+            if (hcp >= 8) {
+                return this.contractOrPass(
+                    auction,
+                    2,
+                    "NT"
+                );
+            }
+
+            return Bid.Pass();
+        }
+
+        /*
+         * -----------------------------------------------------
+         * Opener responded 2S.
+         * -----------------------------------------------------
+         */
+        if (
+            responseSuit ===
+            Suit.Spades
+        ) {
+            /*
+             * We have a spade fit.
+             */
+            if (spades >= 4) {
+                if (hcp >= 10) {
+                    return this.contractOrPass(
+                        auction,
+                        4,
+                        Suit.Spades
+                    );
+                }
+
+                if (hcp >= 8) {
+                    return this.contractOrPass(
+                        auction,
+                        3,
+                        Suit.Spades
+                    );
+                }
+
+                return Bid.Pass();
+            }
+
+            /*
+             * No spade fit.
+             */
+            if (hcp >= 10) {
+                return this.contractOrPass(
+                    auction,
+                    3,
+                    "NT"
+                );
+            }
+
+            if (hcp >= 8) {
+                return this.contractOrPass(
+                    auction,
+                    2,
+                    "NT"
+                );
+            }
+
+            return Bid.Pass();
+        }
+
+        /*
+         * -----------------------------------------------------
+         * Opener responded 2D.
+         *
+         * No four-card major.
+         * -----------------------------------------------------
+         */
+        if (hcp >= 10) {
+            return this.contractOrPass(
+                auction,
+                3,
+                "NT"
+            );
+        }
+
+        if (hcp >= 8) {
+            return this.contractOrPass(
+                auction,
+                2,
+                "NT"
+            );
+        }
+
+        return Bid.Pass();
+    }
+
+    /*
+     * =========================================================
      * OPENER'S REBID
-     * =====================================================
+     * =========================================================
      */
 
     private chooseOpenerRebid(
@@ -630,6 +932,29 @@ private chooseResponse(
 
         const hcp =
             evaluation.highCardPoints;
+
+        /*
+         * =====================================================
+         * STAYMAN RESPONSE
+         * =====================================================
+         *
+         * After:
+         *
+         * 1NT - 2C
+         *
+         * opener MUST answer Stayman.
+         */
+        if (
+            myPreviousCall.bid.level === 1 &&
+            mySuit === "NT" &&
+            partnerCall.bid.level === 2 &&
+            partnerSuit === Suit.Clubs
+        ) {
+            return this.chooseStaymanOpenerResponse(
+                auction,
+                evaluation
+            );
+        }
 
         /*
          * Partner raised opener's suit.
@@ -731,9 +1056,7 @@ private chooseResponse(
         /*
          * Minimum balanced hand.
          */
-        if (
-            evaluation.balanced
-        ) {
+        if (evaluation.balanced) {
             const oneNotrump =
                 Bid.Contract(
                     1,
@@ -753,9 +1076,64 @@ private chooseResponse(
     }
 
     /*
-     * =====================================================
+     * =========================================================
+     * STAYMAN — OPENER'S RESPONSE
+     * =========================================================
+     */
+
+    private chooseStaymanOpenerResponse(
+        auction: Auction,
+        evaluation: HandEvaluation
+    ): Bid {
+        const hearts =
+            evaluation.lengths[
+                Suit.Hearts
+            ];
+
+        const spades =
+            evaluation.lengths[
+                Suit.Spades
+            ];
+
+        /*
+         * 2H shows at least four hearts.
+         *
+         * This also correctly handles a hand
+         * with five hearts.
+         */
+        if (hearts >= 4) {
+            return this.contractOrPass(
+                auction,
+                2,
+                Suit.Hearts
+            );
+        }
+
+        /*
+         * 2S shows at least four spades.
+         */
+        if (spades >= 4) {
+            return this.contractOrPass(
+                auction,
+                2,
+                Suit.Spades
+            );
+        }
+
+        /*
+         * 2D denies a four-card major.
+         */
+        return this.contractOrPass(
+            auction,
+            2,
+            Suit.Diamonds
+        );
+    }
+
+    /*
+     * =========================================================
      * COMPETITIVE BIDDING
-     * =====================================================
+     * =========================================================
      */
 
     private chooseCompetitiveBid(
@@ -897,9 +1275,9 @@ private chooseResponse(
     }
 
     /*
-     * =====================================================
+     * =========================================================
      * GENERAL CONTINUATION
-     * =====================================================
+     * =========================================================
      */
 
     private chooseGeneralContinuation(
@@ -952,9 +1330,9 @@ private chooseResponse(
     }
 
     /*
-     * =====================================================
+     * =========================================================
      * AUCTION CONTEXT HELPERS
-     * =====================================================
+     * =========================================================
      */
 
     private isRespondingToPartner(
@@ -1104,14 +1482,16 @@ private chooseResponse(
         seat: Seat
     ): Seat {
         return nextSeat(
-            nextSeat(seat)
+            nextSeat(
+                seat
+            )
         );
     }
 
     /*
-     * =====================================================
+     * =========================================================
      * BID HELPERS
-     * =====================================================
+     * =========================================================
      */
 
     private contractOrPass(
@@ -1125,7 +1505,9 @@ private chooseResponse(
                 suit
             );
 
-        return auction.isLegalBid(bid)
+        return auction.isLegalBid(
+            bid
+        )
             ? bid
             : Bid.Pass();
     }
@@ -1149,9 +1531,9 @@ private chooseResponse(
     }
 
     /*
-     * =====================================================
+     * =========================================================
      * HAND EVALUATION
-     * =====================================================
+     * =========================================================
      */
 
     private evaluateHand(
@@ -1239,7 +1621,9 @@ private chooseResponse(
         hand: Hand
     ): Suit {
         return this.suitsByLength(
-            this.evaluateHand(hand)
+            this.evaluateHand(
+                hand
+            )
         )[0];
     }
 

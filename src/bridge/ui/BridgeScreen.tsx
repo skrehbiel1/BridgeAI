@@ -1,6 +1,7 @@
 import React, {
     useEffect,
     useReducer,
+    useRef,
     useState
 } from "react";
 
@@ -15,11 +16,33 @@ import {
 
 import BridgeTable from "./BridgeTable";
 
+import {
+    partnershipOf
+} from "../core/Partnership";
+
+import {
+    RubberBridgeScoring,
+    RubberHandResult,
+    RubberState
+} from "../scoring/RubberBridgeScoring";
+
+import {
+    ScoringMode
+} from "./WelcomeScreen";
+
 const COMPUTER_PLAY_DELAY_MS = 650;
 
 interface Props {
     initialGame?: Game;
     onNewBoard?: () => void;
+
+    scoringMode: ScoringMode;
+
+    rubberState: RubberState;
+
+    onRubberStateChange: (
+        state: RubberState
+    ) => void;
 }
 
 function createGame(): Game {
@@ -35,7 +58,10 @@ function createGame(): Game {
 
 export default function BridgeScreen({
     initialGame,
-    onNewBoard
+    onNewBoard,
+    scoringMode,
+    rubberState,
+    onRubberStateChange
 }: Props) {
     const [
         renderVersion,
@@ -45,6 +71,16 @@ export default function BridgeScreen({
             version + 1,
         0
     );
+
+const [
+    rubberHandResult,
+    setRubberHandResult
+] = useState<
+    RubberHandResult | null
+>(null);
+
+const rubberScoredRef =
+    useRef(false);
 
     const [
         historyVisible,
@@ -208,6 +244,76 @@ export default function BridgeScreen({
         game,
         renderVersion
     ]);
+
+
+useEffect(() => {
+    if (
+        scoringMode !== "rubber" ||
+        !game.isFinished() ||
+        rubberScoredRef.current
+    ) {
+        return;
+    }
+
+    /*
+     * Important:
+     * scoreHand mutates the RubberState.
+     *
+     * Make a fresh copy so React receives
+     * a new state object.
+     */
+    const nextState:
+        RubberState = {
+        NS: {
+            ...rubberState.NS
+        },
+
+        EW: {
+            ...rubberState.EW
+        },
+
+        rubberComplete:
+            rubberState.rubberComplete,
+
+        rubberWinner:
+            rubberState.rubberWinner
+    };
+
+    /*
+     * Mark this hand as scored BEFORE
+     * calculating it. This prevents duplicate
+     * scoring if React renders/evaluates again.
+     */
+    rubberScoredRef.current =
+        true;
+
+    const result =
+        RubberBridgeScoring
+            .scoreHand(
+                nextState,
+                game.contract,
+                partnershipOf(
+                    game.contract
+                        .declarer
+                ),
+                game.contractTricksWon()
+            );
+
+    setRubberHandResult(
+        result
+    );
+
+    onRubberStateChange(
+        nextState
+    );
+}, [
+    game,
+    scoringMode,
+    rubberState,
+    onRubberStateChange,
+    renderVersion
+]);
+
 
     function playHumanCard(
         seat: Seat,
@@ -423,6 +529,14 @@ export default function BridgeScreen({
     return (
         <BridgeTable
             game={game}
+	    scoringMode={scoringMode}
+
+	    rubberState={rubberState}
+
+	    rubberHandResult={
+	        rubberHandResult
+	    }
+
             displayedTrick={
                 displayedTrick
             }
@@ -511,23 +625,52 @@ function getStatusMessage(
         );
     }
 
-    if (southCanPlay) {
-        return game.isDummy(
+if (southCanPlay) {
+    if (
+        !game.isDeclarerSide(
             Seat.South
         )
-            ? "Your turn — play from dummy"
-            : "Your turn — play from South";
+    ) {
+        return "Your turn — defend from South";
     }
 
-    if (northCanPlay) {
-        return game.isDummy(
-            Seat.North
-        )
-            ? "Your turn — play from dummy"
-            : "Your turn — play from North";
-    }
+    return game.isDummy(
+        Seat.South
+    )
+        ? "Your turn — play from dummy"
+        : "Your turn — play from South";
+}
 
+if (northCanPlay) {
+    return game.isDummy(
+        Seat.North
+    )
+        ? "Your turn — play from dummy"
+        : "Your turn — play from North";
+}
+
+if (
+    game.isDeclarer(
+        game.currentSeat
+    )
+) {
     return (
-        `${game.currentSeat} is playing`
+        `${game.currentSeat} — Declarer is playing`
     );
+}
+
+if (
+    game.isDummy(
+        game.currentSeat
+    )
+) {
+    return (
+        `${game.currentSeat} — Dummy is playing`
+    );
+}
+
+return (
+    `${game.currentSeat} — Defender is playing`
+);
+
 }

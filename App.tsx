@@ -1,16 +1,43 @@
-import React from "react";
+import React, {
+    useState
+} from "react";
 
 import {
-    SafeAreaProvider
-} from "react-native-safe-area-context";
+    StatusBar
+} from "expo-status-bar";
 
 import BridgeSessionScreen
 from "./src/bridge/ui/BridgeSessionScreen";
 
+import WelcomeScreen, {
+    ScoringMode
+} from "./src/bridge/ui/WelcomeScreen";
+
 export default function App() {
+    const [
+        scoringMode,
+        setScoringMode
+    ] = useState<
+        ScoringMode | null
+    >(null);
+
     return (
-        <SafeAreaProvider>
-            <BridgeSessionScreen />
-        </SafeAreaProvider>
+        <>
+            <StatusBar style="light" />
+
+            {scoringMode ? (
+                <BridgeSessionScreen
+                    scoringMode={
+                        scoringMode
+                    }
+                />
+            ) : (
+                <WelcomeScreen
+                    onStart={
+                        setScoringMode
+                    }
+                />
+            )}
+        </>
     );
 }
